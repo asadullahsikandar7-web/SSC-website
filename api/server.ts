@@ -109,7 +109,7 @@ app.use((_req: Request, res: Response) => {
   });
 });
 
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
   app.listen(port, () => {
     console.log(`API listening on port ${port}`);
   });
