@@ -1,0 +1,25 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="900" fill="#F7F2E8"/>
+  <rect width="1200" height="900" fill="url(#paint0_linear_1_2)" fill-opacity="0.9"/>
+  <circle cx="915" cy="160" r="120" fill="#C5A45D" fill-opacity="0.32"/>
+  <circle cx="250" cy="640" r="200" fill="#173D35" fill-opacity="0.18"/>
+  <path d="M928 760C928 684.641 986.641 626 1062 626H1170V900H928V760Z" fill="#173D35" fill-opacity="0.72"/>
+  <path d="M660 760C660 596.218 777.218 479 941 479H1032V900H660V760Z" fill="#762F40" fill-opacity="0.66"/>
+  <path d="M120 760C120 496.861 318.861 298 582 298H660V900H120V760Z" fill="#173D35" fill-opacity="0.7"/>
+  <path d="M430 646C430 530.108 518.108 442 634 442H700V900H430V646Z" fill="#F7F2E8" fill-opacity="0.75"/>
+  <path d="M500 750H608V900H500V750Z" fill="#C5A45D" fill-opacity="0.9"/>
+  <path d="M648 750H722V900H648V750Z" fill="#173D35" fill-opacity="0.8"/>
+  <path d="M730 750H837V900H730V750Z" fill="#C5A45D" fill-opacity="0.8"/>
+  <circle cx="874" cy="430" r="76" fill="#F7F2E8" fill-opacity="0.92"/>
+  <path d="M835 428L867 460L914 392" stroke="#173D35" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="88" y="116" width="242" height="126" rx="18" fill="#F7F2E8" fill-opacity="0.8"/>
+  <text x="110" y="170" fill="#173D35" font-family="Georgia, serif" font-size="52" font-weight="700">SSC</text>
+  <text x="110" y="210" fill="#762F40" font-family="Arial, sans-serif" font-size="28" letter-spacing="6">LAHORE</text>
+  <defs>
+    <linearGradient id="paint0_linear_1_2" x1="138" y1="82" x2="1037" y2="879" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#173D35"/>
+      <stop offset="0.4" stop-color="#C5A45D" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#F7F2E8"/>
+    </linearGradient>
+  </defs>
+</svg>
