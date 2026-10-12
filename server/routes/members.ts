@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { asyncHandler } from '../lib/asyncHandler';
-import { requireAuth, requireRole, type AuthenticatedRequest } from '../middleware/auth';
-import { EventRegistration } from '../models/EventRegistration';
-import { Member } from '../models/Member';
+import { asyncHandler } from '../lib/asyncHandler.js';
+import { requireAuth, requireRole, type AuthenticatedRequest } from '../middleware/auth.js';
+import { EventRegistration } from '../models/EventRegistration.js';
+import { Member } from '../models/Member.js';
 
 const router = Router();
 router.use(requireAuth, requireRole(['member']));

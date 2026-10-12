@@ -26,7 +26,8 @@ const sessionSchema = new Schema<ISession>(
     expiresAt: {
       type: Date,
       required: true,
-      index: true,
+      // TTL index: MongoDB removes sessions once they expire.
+      index: { expires: 0 },
     },
     userAgent: {
       type: String,

@@ -24,11 +24,19 @@ A production-minded multilingual website and member platform for the Saraiki Stu
 6. Create the first staff account in an interactive terminal with `npm run admin:create`.
 7. Verify SMTP connectivity without sending a message with `npm run email:verify`.
 
+## Deploying to Vercel
+
+- Import the repository in Vercel; `vercel.json` already sets the Vite build, the `/api/*` rewrite, and the SPA fallback.
+- The whole API runs as one function, `api/index.ts`, which wraps the Express app in `server/`. Keep server code out of `api/`: every file there becomes its own function.
+- Add these in Project Settings > Environment Variables: `MONGODB_URI`, `SESSION_SECRET`, `APP_URL` (the deployed origin, e.g. `https://your-site.vercel.app`), `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `CONTACT_TO`.
+- Do not set `NODE_ENV`, `PORT`, or `VITE_API_BASE_URL` on Vercel. `CORS_ORIGIN` is optional because the site and API share one origin.
+- In MongoDB Atlas, allow access from anywhere (`0.0.0.0/0`) under Network Access; Vercel functions have no fixed IP.
+
 ## Membership workflow
 
 - Students submit applications at `/join`; student ID is unique and each application starts in the pending queue.
 - Staff sign in at `/council/review` to filter, approve, or decline applications. A reason is required for declines.
-- The first administrator is created with `npm run admin:create`; the password is entered without echo and stored as an Argon2 hash.
+- The first administrator is created with `npm run admin:create`; the password is entered without echo and stored as a bcrypt hash.
 - On approval, an account is created and the applicant receives a localized email with a single-use, 48-hour activation link. Failed email delivery is recorded for staff retry.
 - SMTP settings support `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_SECURE` and the corresponding lowercase names (`smtp_host`, `smtp_port`, `smtp_user`, `smtp_pass`, `smtp_from`, `smtp_secure`).
 - Public enquiries are stored in the staff inbox at `/council/inbox`; set `CONTACT_TO` (or `contact_to`) to the council mailbox for SMTP delivery.
@@ -48,6 +56,7 @@ A production-minded multilingual website and member platform for the Saraiki Stu
 - npm run test:run
 - npm run test:api
 - npm run admin:create
+- npm run seed (adds starter announcements, articles, cabinet profiles, events, and volunteer calls; only inserts what is missing)
 - npm run email:verify
 
 ## Milestones
@@ -62,7 +71,7 @@ Implementation status follows the milestone plan in the project brief.
 - Milestone 6: announcement, culture-story, and leadership CMS implemented
 - Milestone 7: member activation/portal and volunteer workflow implemented
 - Milestone 8: API/UI tests and core security controls implemented; final policy/security review remains
-- Milestone 9: setup documentation present; production hosting and deployment target remain to be selected
+- Milestone 9: setup documentation present; configured for Vercel deployment
 
 ## Notes
 

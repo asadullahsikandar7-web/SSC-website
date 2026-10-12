@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { verifySmtpConnection } from '../lib/membershipEmail';
+import { verifySmtpConnection } from '../lib/membershipEmail.js';
 
 verifySmtpConnection()
   .then(() => {

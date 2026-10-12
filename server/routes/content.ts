@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
 import { z } from 'zod';
-import { asyncHandler } from '../lib/asyncHandler';
-import { requireAuth, requireRole, type AuthenticatedRequest } from '../middleware/auth';
-import { ContentItem } from '../models/ContentItem';
+import { asyncHandler } from '../lib/asyncHandler.js';
+import { requireAuth, requireRole, type AuthenticatedRequest } from '../middleware/auth.js';
+import { ContentItem } from '../models/ContentItem.js';
 
 const router = Router();
 const contentTypes = ['announcement', 'article', 'leader'] as const;
@@ -64,11 +64,25 @@ router.patch('/manage/:id', requireAuth, requireRole(editorRoles), asyncHandler(
   }
 
   const update: Record<string, unknown> = { ...parsed.data };
-  if (parsed.data.imageUrl === '') update.imageUrl = undefined;
+  const unset: Record<string, 1> = {};
+  if (parsed.data.imageUrl === '') { delete update.imageUrl; unset.imageUrl = 1; }
+  if (parsed.data.roleTitle === '') { delete update.roleTitle; unset.roleTitle = 1; }
   if (parsed.data.status === 'published') update.publishedAt = new Date();
-  if (parsed.data.status === 'draft') update.publishedAt = undefined;
+  if (parsed.data.status === 'draft') unset.publishedAt = 1;
 
-  const item = await ContentItem.findByIdAndUpdate(req.params.id, { $set: update }, { new: true, runValidators: true }).lean();
+  let item;
+  try {
+    item = await ContentItem.findByIdAndUpdate(
+      req.params.id,
+      { $set: update, ...(Object.keys(unset).length ? { $unset: unset } : {}) },
+      { new: true, runValidators: true },
+    ).lean();
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
+      return res.status(409).json({ success: false, message: 'An item with this URL name already exists in this content section.' });
+    }
+    throw error;
+  }
   if (!item) return res.status(404).json({ success: false, message: 'Content item not found.' });
   return res.status(200).json({ success: true, data: { item: safeContent(item as unknown as Record<string, unknown>) } });
 }));
@@ -90,8 +104,12 @@ router.get('/:contentType', asyncHandler(async (req, res) => {
   if (locale !== undefined && !['en', 'ur', 'skr'].includes(String(locale))) {
     return res.status(400).json({ success: false, message: 'Invalid language filter.' });
   }
-  const filter = { contentType: req.params.contentType, status: 'published', ...(locale ? { locale: String(locale) } : {}) };
-  const items = await ContentItem.find(filter).sort({ publishedAt: -1, createdAt: -1 }).lean();
+  const published = { contentType: req.params.contentType, status: 'published' };
+  let items = await ContentItem.find({ ...published, ...(locale ? { locale: String(locale) } : {}) }).sort({ publishedAt: -1, createdAt: -1 }).lean();
+  // Nothing published in the requested language yet: show the section in its other languages rather than empty.
+  if (locale && items.length === 0) {
+    items = await ContentItem.find(published).sort({ publishedAt: -1, createdAt: -1 }).lean();
+  }
   return res.status(200).json({ success: true, data: { items: items.map((item) => safeContent(item as unknown as Record<string, unknown>)) } });
 }));
 

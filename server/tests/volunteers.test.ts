@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
-import app from '../server';
+import app from '../app';
 import { hashPassword } from '../lib/auth';
 import { Member } from '../models/Member';
 import { User } from '../models/User';

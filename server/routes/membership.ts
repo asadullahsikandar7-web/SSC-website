@@ -2,14 +2,14 @@ import { createHash, randomBytes } from 'node:crypto';
 import { Router } from 'express';
 import mongoose from 'mongoose';
 import { z } from 'zod';
-import { asyncHandler } from '../lib/asyncHandler';
-import { hashPassword } from '../lib/auth';
-import { sendMembershipDecisionEmail } from '../lib/membershipEmail';
-import { requireAuth, requireRole, type AuthenticatedRequest } from '../middleware/auth';
-import { Member } from '../models/Member';
-import { MemberInvite } from '../models/MemberInvite';
-import { MembershipApplication } from '../models/MembershipApplication';
-import { User } from '../models/User';
+import { asyncHandler } from '../lib/asyncHandler.js';
+import { hashPassword } from '../lib/auth.js';
+import { sendMembershipDecisionEmail } from '../lib/membershipEmail.js';
+import { requireAuth, requireRole, type AuthenticatedRequest } from '../middleware/auth.js';
+import { Member } from '../models/Member.js';
+import { MemberInvite } from '../models/MemberInvite.js';
+import { MembershipApplication } from '../models/MembershipApplication.js';
+import { User } from '../models/User.js';
 
 const router = Router();
 
@@ -42,6 +42,7 @@ const accountSetupSchema = z.object({
 function applicationUrl(requestOrigin?: string) {
   const configuredUrl = process.env.APP_URL ?? process.env.app_url;
   if (configuredUrl) return new URL(configuredUrl).origin;
+  if (process.env.VERCEL && process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
 
   const allowedOrigins = (process.env.CORS_ORIGIN ?? '').split(',').map((origin) => origin.trim()).filter(Boolean);
   if (requestOrigin && allowedOrigins.includes(requestOrigin)) return new URL(requestOrigin).origin;

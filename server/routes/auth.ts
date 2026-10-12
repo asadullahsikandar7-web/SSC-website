@@ -1,15 +1,26 @@
 import crypto from 'node:crypto';
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
-import { asyncHandler } from '../lib/asyncHandler';
-import { verifyPassword } from '../lib/auth';
-import { requireAuth, SESSION_COOKIE_NAME, type AuthenticatedRequest } from '../middleware/auth';
-import { Session } from '../models/Session';
-import { User } from '../models/User';
+import { asyncHandler } from '../lib/asyncHandler.js';
+import { verifyPassword } from '../lib/auth.js';
+import { requireAuth, SESSION_COOKIE_NAME, type AuthenticatedRequest } from '../middleware/auth.js';
+import { Session } from '../models/Session.js';
+import { User } from '../models/User.js';
 
 const router = Router();
 
-router.post('/login', asyncHandler(async (req, res) => {
+// Only failed attempts count, so normal sign-ins are never throttled.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many sign-in attempts. Please try again in a few minutes.' },
+});
+
+router.post('/login', loginLimiter, asyncHandler(async (req, res) => {
   const schema = z.object({
     email: z.string().email(),
     password: z.string().min(8),
@@ -76,7 +87,7 @@ router.post('/logout', requireAuth, asyncHandler(async (req: AuthenticatedReques
     await Session.findByIdAndDelete(req.session.id);
   }
 
-  res.clearCookie(SESSION_COOKIE_NAME, { httpOnly: true, sameSite: 'lax' });
+  res.clearCookie(SESSION_COOKIE_NAME, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
 
   return res.status(200).json({
     success: true,

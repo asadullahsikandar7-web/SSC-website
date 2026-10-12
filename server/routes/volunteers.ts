@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
 import { z } from 'zod';
-import { asyncHandler } from '../lib/asyncHandler';
-import { requireAuth, requireRole, type AuthenticatedRequest } from '../middleware/auth';
-import { Member } from '../models/Member';
-import { VolunteerOpportunity } from '../models/VolunteerOpportunity';
-import { VolunteerSignup } from '../models/VolunteerSignup';
+import { asyncHandler } from '../lib/asyncHandler.js';
+import { requireAuth, requireRole, type AuthenticatedRequest } from '../middleware/auth.js';
+import { Member } from '../models/Member.js';
+import { VolunteerOpportunity } from '../models/VolunteerOpportunity.js';
+import { VolunteerSignup } from '../models/VolunteerSignup.js';
 
 const router = Router();
 const managerRoles = ['admin', 'event_manager'];

@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
 import { z } from 'zod';
-import { asyncHandler } from '../lib/asyncHandler';
-import { requireAuth, requireRole, type AuthenticatedRequest } from '../middleware/auth';
-import { Event } from '../models/Event';
-import { EventRegistration } from '../models/EventRegistration';
+import { asyncHandler } from '../lib/asyncHandler.js';
+import { requireAuth, requireRole, type AuthenticatedRequest } from '../middleware/auth.js';
+import { Event } from '../models/Event.js';
+import { EventRegistration } from '../models/EventRegistration.js';
 
 const router = Router();
 
@@ -87,7 +87,15 @@ router.patch(
     if (!parsed.success || Object.keys(req.body as object).length === 0) {
       return res.status(400).json({ success: false, message: 'Please review the event changes.' });
     }
-    const event = await Event.findByIdAndUpdate(req.params.id, parsed.data, { new: true, runValidators: true }).lean();
+    let event;
+    try {
+      event = await Event.findByIdAndUpdate(req.params.id, parsed.data, { new: true, runValidators: true }).lean();
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
+        return res.status(409).json({ success: false, message: 'An event already uses that URL name.' });
+      }
+      throw error;
+    }
     if (!event) return res.status(404).json({ success: false, message: 'Event not found.' });
     return res.status(200).json({ success: true, data: { event: publicEvent(event as unknown as Record<string, unknown>) } });
   }),
@@ -111,6 +119,7 @@ router.post('/:slug/registrations', asyncHandler(async (req, res) => {
 
   const event = await Event.findOne({ slug: req.params.slug, status: 'published', registrationOpen: true });
   if (!event) return res.status(404).json({ success: false, message: 'Registration is not open for this event.' });
+  if (event.endsAt.getTime() < Date.now()) return res.status(409).json({ success: false, message: 'This event has already taken place.' });
 
   await EventRegistration.init();
   const alreadyRegistered = await EventRegistration.exists({ eventId: event._id, email: parsed.data.email.toLowerCase(), status: 'confirmed' });

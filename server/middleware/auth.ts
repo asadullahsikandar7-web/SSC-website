@@ -1,9 +1,9 @@
 import type { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
-import type { ISession } from '../models/Session';
-import type { IUser } from '../models/User';
-import { Session } from '../models/Session';
-import { User } from '../models/User';
+import type { ISession } from '../models/Session.js';
+import type { IUser } from '../models/User.js';
+import { Session } from '../models/Session.js';
+import { User } from '../models/User.js';
 
 export const SESSION_COOKIE_NAME = 'ssc_session';
 

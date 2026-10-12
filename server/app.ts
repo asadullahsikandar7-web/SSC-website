@@ -4,21 +4,26 @@ import dotenv from 'dotenv';
 import express, { type Request, type Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
-import { asyncHandler } from './lib/asyncHandler';
-import { connectDatabase } from './lib/db';
-import { attachSession, requireRole } from './middleware/auth';
-import authRoutes from './routes/auth';
-import membershipRoutes from './routes/membership';
-import eventRoutes from './routes/events';
-import contentRoutes from './routes/content';
-import memberRoutes from './routes/members';
-import volunteerRoutes from './routes/volunteers';
-import contactRoutes from './routes/contact';
+import { asyncHandler } from './lib/asyncHandler.js';
+import { connectDatabase } from './lib/db.js';
+import { attachSession, requireRole } from './middleware/auth.js';
+import authRoutes from './routes/auth.js';
+import membershipRoutes from './routes/membership.js';
+import eventRoutes from './routes/events.js';
+import contentRoutes from './routes/content.js';
+import memberRoutes from './routes/members.js';
+import volunteerRoutes from './routes/volunteers.js';
+import contactRoutes from './routes/contact.js';
 
 dotenv.config();
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
+
+if (process.env.VERCEL) {
+  // Behind Vercel's proxy: needed for correct client IPs in rate limiting.
+  app.set('trust proxy', 1);
+}
 
 app.use(
   helmet({
@@ -35,6 +40,18 @@ app.use(
 );
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
+app.use((_req: Request, res: Response, next: express.NextFunction) => {
+  connectDatabase().then(
+    () => next(),
+    (error: unknown) => {
+      console.error('Database connection failed:', error instanceof Error ? error.message : 'Unknown database error');
+      res.status(500).json({
+        success: false,
+        message: 'Service unavailable.',
+      });
+    },
+  );
+});
 app.use(asyncHandler(attachSession));
 
 const apiLimiter = rateLimit({
@@ -95,6 +112,15 @@ app.get('/api/v1/admin-check', requireRole(['admin']), (_req: Request, res: Resp
 });
 
 app.use((error: unknown, _req: Request, res: Response, _next: express.NextFunction) => {
+  const status = error && typeof error === 'object' && 'status' in error ? Number(error.status) : 500;
+  if (status === 400 || status === 413) {
+    res.status(status).json({
+      success: false,
+      message: status === 413 ? 'The request is too large.' : 'The request could not be read.',
+    });
+    return;
+  }
+
   console.error('Unhandled API error:', error);
   res.status(500).json({
     success: false,

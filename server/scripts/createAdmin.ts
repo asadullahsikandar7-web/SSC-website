@@ -1,8 +1,8 @@
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
-import { connectDatabase, disconnectDatabase } from '../lib/db';
-import { hashPassword } from '../lib/auth';
-import { User } from '../models/User';
+import { connectDatabase, disconnectDatabase } from '../lib/db.js';
+import { hashPassword } from '../lib/auth.js';
+import { User } from '../models/User.js';
 
 async function promptHidden(label: string) {
   if (!stdin.isTTY || !stdin.setRawMode) {

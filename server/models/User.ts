@@ -1,5 +1,5 @@
 import mongoose, { Schema, model } from 'mongoose';
-import type { UserRole } from '../lib/roles';
+import type { UserRole } from '../lib/roles.js';
 
 export interface IUser {
   email: string;

@@ -135,6 +135,8 @@ const cabinetMembers: CabinetMember[] = [
   { id: 'hasnain-shafi', name: 'Hasnain Shafi', designation: 'Sports Secretary', category: 'executive', notes: 'No matching local portrait file found for Hasnain Shafi (expected hasnain.* in src/assets).' },
 ];
 
+const cabinetPortraits: Record<string, string | undefined> = Object.fromEntries(cabinetMembers.map((member) => [member.name, member.image]));
+
 const galleryCards = [
   { title: 'Saraiki cultural illustration', image: assets.councilPortrait, portrait: true },
   { title: 'Heritage showcase', image: assets.heritageScene },
@@ -344,7 +346,7 @@ function HomePage({ locale }: { locale: Locale }) {
   useEffect(() => {
     let active = true;
     apiRequest<{ events: CouncilEvent[] }>('/api/v1/events')
-      .then((result) => { if (active) setEvents(result.events.slice(0, 3)); })
+      .then((result) => { if (active) setEvents(result.events.filter((event) => new Date(event.endsAt).getTime() >= Date.now()).slice(0, 3)); })
       .catch(() => { if (active) setEvents([]); });
     return () => { active = false; };
   }, []);
@@ -452,7 +454,7 @@ function HomePage({ locale }: { locale: Locale }) {
           {articles.length === 0 ? <p className="border-y border-emerald/10 py-7 text-sm text-charcoal/60">Cultural stories will appear here as the council publishes them.</p> : (
             <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
               {articles[0] && <article className="overflow-hidden border border-emerald/10 bg-white shadow-soft">
-                {articles[0].imageUrl ? <img src={articles[0].imageUrl} alt="" className="h-72 w-full object-cover" /> : <div className="h-56 bg-emerald" />}
+                <img src={articles[0].imageUrl || assets.heritageScene} alt="" className="h-72 w-full object-cover" />
                 <div className="p-6"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Feature article</p><h3 className="mt-3 font-display text-3xl text-emerald">{articles[0].title}</h3><p className="mt-4 text-charcoal/75">{articles[0].summary}</p><Link to={`/culture/${articles[0].slug}`} className="mt-5 inline-flex font-semibold text-maroon underline-offset-4 hover:underline">Read story</Link></div>
               </article>}
               <div className="space-y-4">{articles.slice(1, 4).map((article) => <article key={article.id} className="border-b border-emerald/15 bg-white p-5 shadow-soft"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Culture</p><h3 className="mt-2 font-display text-xl text-emerald">{article.title}</h3><p className="mt-2 text-sm text-charcoal/70">{article.summary}</p><Link to={`/culture/${article.slug}`} className="mt-4 inline-flex text-sm font-semibold text-maroon hover:underline">Read article</Link></article>)}</div>
@@ -466,7 +468,7 @@ function HomePage({ locale }: { locale: Locale }) {
             title={t.leadershipPreview}
             description="The council brings together students, mentors, and volunteers dedicated to belonging, representation, and cultural stewardship."
           />
-          {leaders.length === 0 ? <p className="border-y border-emerald/10 py-7 text-sm text-charcoal/60">Council profiles will be added as they are approved for publication.</p> : <div className="grid gap-6 md:grid-cols-3">{leaders.slice(0, 3).map((profile) => <article key={profile.id} className="overflow-hidden border-b border-emerald/15 bg-white shadow-soft">{profile.imageUrl ? <img src={profile.imageUrl} alt="" className="h-48 w-full object-cover" /> : <div className="flex h-32 items-end bg-emerald p-5"><span className="font-display text-4xl text-gold">{profile.title.slice(0, 1)}</span></div>}<div className="p-6"><p className="text-xs uppercase tracking-[0.16em] text-gold">{profile.roleTitle || 'Council member'}</p><h3 className="mt-2 font-display text-2xl text-emerald">{profile.title}</h3><p className="mt-3 text-sm text-charcoal/70">{profile.summary}</p></div></article>)}</div>}
+          {leaders.length === 0 ? <p className="border-y border-emerald/10 py-7 text-sm text-charcoal/60">Council profiles will be added as they are approved for publication.</p> : <div className="grid gap-6 md:grid-cols-3">{leaders.slice(0, 3).map((profile) => <article key={profile.id} className="overflow-hidden border-b border-emerald/15 bg-white shadow-soft">{profile.imageUrl || cabinetPortraits[profile.title] ? <img src={profile.imageUrl || cabinetPortraits[profile.title]} alt="" className="h-72 w-full object-cover object-top" /> : <div className="flex h-32 items-end bg-emerald p-5"><span className="font-display text-4xl text-gold">{profile.title.slice(0, 1)}</span></div>}<div className="p-6"><p className="text-xs uppercase tracking-[0.16em] text-gold">{profile.roleTitle || 'Council member'}</p><h3 className="mt-2 font-display text-2xl text-emerald">{profile.title}</h3><p className="mt-3 text-sm text-charcoal/70">{profile.summary}</p></div></article>)}</div>}
         </section>
 
         <section>
@@ -725,7 +727,7 @@ function EventDetailPage() {
             <div className="h-64 overflow-hidden bg-ivory sm:h-96"><img src={event.coverImage || assets.eventSurface} alt="" className="h-full w-full object-cover" /></div>
             <p className="mt-6 text-xs font-semibold uppercase tracking-[0.2em] text-gold">{new Date(event.startsAt).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' })}</p>
             <h2 className="mt-3 font-display text-4xl leading-tight text-emerald sm:text-5xl">{event.title}</h2>
-            <p className="mt-5 text-base leading-7 text-charcoal/75">{event.description}</p>
+            <p className="mt-5 whitespace-pre-line text-base leading-7 text-charcoal/75">{event.description}</p>
             <div className="mt-7 grid gap-4 border-t border-emerald/15 pt-5 sm:grid-cols-2">
               <div><p className="text-xs uppercase tracking-[0.16em] text-charcoal/50">Venue</p><p className="mt-1 text-sm text-charcoal/80">{event.venue}</p></div>
               <div><p className="text-xs uppercase tracking-[0.16em] text-charcoal/50">Places</p><p className="mt-1 text-sm text-charcoal/80">{event.capacity ? `${Math.max(event.capacity - event.registrationCount, 0)} of ${event.capacity} remaining` : 'Open registration'}</p></div>
@@ -734,7 +736,7 @@ function EventDetailPage() {
           <aside className="h-fit border border-emerald/15 bg-white p-6 sm:p-8">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Registration</p>
             <h3 className="mt-3 font-display text-3xl text-emerald">Save your place.</h3>
-            {message ? <p role="status" className="mt-5 border-l-2 border-emerald bg-emerald/5 px-4 py-3 text-sm text-emerald">{message}</p> : event.registrationOpen && (!event.capacity || event.registrationCount < event.capacity) ? (
+            {message ? <p role="status" className="mt-5 border-l-2 border-emerald bg-emerald/5 px-4 py-3 text-sm text-emerald">{message}</p> : event.registrationOpen && new Date(event.endsAt).getTime() >= Date.now() && (!event.capacity || event.registrationCount < event.capacity) ? (
               <form onSubmit={register} className="mt-6 space-y-4">
                 <label className="block text-sm font-medium text-emerald">Full name<input required autoComplete="name" className="mt-2 w-full border border-emerald/20 px-3 py-3 text-sm outline-none focus:border-gold" value={fullName} onChange={(input) => setFullName(input.target.value)} /></label>
                 <label className="block text-sm font-medium text-emerald">University email<input required type="email" autoComplete="email" className="mt-2 w-full border border-emerald/20 px-3 py-3 text-sm outline-none focus:border-gold" value={email} onChange={(input) => setEmail(input.target.value)} /></label>
@@ -743,7 +745,7 @@ function EventDetailPage() {
                 {error && <p role="alert" className="text-sm text-maroon">{error}</p>}
                 <button disabled={submitting} className="w-full bg-emerald px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-ivory disabled:opacity-50">{submitting ? 'Confirming…' : 'Register for event'}</button>
               </form>
-            ) : <p className="mt-5 text-sm leading-6 text-charcoal/70">Registration is currently closed or this event is full.</p>}
+            ) : <p className="mt-5 text-sm leading-6 text-charcoal/70">{new Date(event.endsAt).getTime() < Date.now() ? 'This event has already taken place.' : 'Registration is currently closed or this event is full.'}</p>}
           </aside>
         </div>
       )}
@@ -1276,7 +1278,7 @@ function AnnouncementsPage({ locale }: { locale: Locale }) {
       ) : <div className="divide-y divide-emerald/15">{items.map((item) => (
         <article key={item.id} className="grid gap-4 py-7 sm:grid-cols-[10rem_1fr]">
           <p className="text-xs uppercase tracking-[0.16em] text-gold">{item.publishedAt ? new Date(item.publishedAt).toLocaleDateString(undefined, { dateStyle: 'medium' }) : 'Council update'}</p>
-          <div><h2 className="font-display text-2xl text-emerald">{item.title}</h2><p className="mt-2 text-sm leading-6 text-charcoal/70">{item.summary}</p></div>
+          <div><h2 className="font-display text-2xl text-emerald"><Link to={`/announcements/${item.slug}`} className="hover:text-maroon">{item.title}</Link></h2><p className="mt-2 text-sm leading-6 text-charcoal/70">{item.summary}</p><Link to={`/announcements/${item.slug}`} className="mt-3 inline-flex text-sm font-semibold text-maroon underline-offset-4 hover:underline">Read update</Link></div>
         </article>
       ))}</div>}
     </PageShell>

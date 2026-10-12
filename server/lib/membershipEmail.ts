@@ -1,6 +1,6 @@
 import nodemailer, { type Transporter } from 'nodemailer';
 import type { Locale } from '../../src/i18n/translations';
-import type { MembershipStatus } from '../models/MembershipApplication';
+import type { MembershipStatus } from '../models/MembershipApplication.js';
 
 type DecisionEmailInput = {
   email: string;

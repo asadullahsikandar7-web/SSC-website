@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
-import { asyncHandler } from '../lib/asyncHandler';
-import { sendCouncilContactEmail } from '../lib/membershipEmail';
-import { requireAuth, requireRole } from '../middleware/auth';
-import { ContactMessage } from '../models/ContactMessage';
+import { asyncHandler } from '../lib/asyncHandler.js';
+import { sendCouncilContactEmail } from '../lib/membershipEmail.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
+import { ContactMessage } from '../models/ContactMessage.js';
 
 const router = Router();
 const publicLimiter = rateLimit({
