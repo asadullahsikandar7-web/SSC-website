@@ -320,6 +320,196 @@ textarea {
   transform: translateY(-1px);
 }
 
+@keyframes preview-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.preview-pop {
+  animation: preview-pop 380ms cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
+}
+
+.page-shell .logo-button,
+.logo-button {
+  min-height: 0;
+  padding: 0;
+  background: none;
+}
+
+/* ---------- Poetry ---------- */
+
+.verse {
+  font-family: "Noto Nastaliq Urdu", "Noto Naskh Arabic", serif;
+  letter-spacing: 0;
+  word-spacing: 0.08em;
+}
+
+.verse-label {
+  font-family: "Noto Naskh Arabic", serif;
+  letter-spacing: 0;
+}
+
+/* ---------- Phones first ---------- */
+
+html,
+body {
+  overflow-x: clip;
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-bar {
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -10px 30px rgba(23, 61, 53, 0.08);
+}
+
+.tab-item {
+  position: relative;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.tab-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 0;
+  height: 3px;
+  border-radius: 0 0 6px 6px;
+  background: #c5a45d;
+  transform: translateX(-50%);
+  transition: width 260ms ease;
+}
+
+.tab-item.is-active::before {
+  width: 1.75rem;
+}
+
+.tab-item:active {
+  transform: scale(0.94);
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.sheet-panel {
+  animation: sheet-up 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  padding-bottom: env(safe-area-inset-bottom);
+  overscroll-behavior: contain;
+}
+
+.sheet-backdrop {
+  animation: fade-in 260ms ease both;
+}
+
+@media (max-width: 767px) {
+  /* Swipeable rows: one card in view, the next one peeking in. */
+  .mobile-carousel {
+    display: flex;
+    gap: 0.875rem;
+    margin-inline: -1rem;
+    padding: 0.25rem 1rem 1.25rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 1rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobile-carousel::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-carousel > * {
+    flex: 0 0 82%;
+    scroll-snap-align: start;
+  }
+
+  .mobile-carousel.gallery-row > * {
+    flex-basis: 72%;
+    height: 19rem;
+  }
+
+  .mobile-carousel .reveal {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Hover lift is for pointers; on touch it sticks after a tap. */
+  .card-lift:hover {
+    transform: none;
+  }
+
+  .card-lift:active {
+    transform: scale(0.985);
+  }
+
+  /* 16px stops iOS from zooming the page when a field is focused. */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+    min-height: 3rem;
+  }
+
+  .site-header select {
+    min-height: 2.25rem;
+  }
+
+  .page-shell button,
+  .page-shell a[class*="rounded-full"] {
+    min-height: 2.75rem;
+  }
+
+  .page-shell input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .page-shell table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .page-shell {
+    overflow-wrap: anywhere;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -1,3 +1,5 @@
+import logo from './logo.webp';
+import logoLarge from './logo-large.webp';
 import heroVisual from './hero-visual.svg';
 import heritageScene from './heritage-scene.jpg';
 import eventSurface from './event-surface.svg';
@@ -15,6 +17,8 @@ import ahmedPicturePortrait from './Ahmed picture.jpeg';
 import asadullahPortrait from './Asadullah.jpeg';
 
 export const assets = {
+  logo,
+  logoLarge,
   heroVisual,
   heritageScene,
   eventSurface,

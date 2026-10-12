@@ -563,6 +563,21 @@ const table: Array<[string, string, string]> = [
   ["Reach us directly", "براہِ راست رابطہ", "سدھا رابطہ"],
   ["Council on Facebook", "فیس بک پر کونسل", "فیس بک تے کونسل"],
   ["Council on TikTok", "ٹک ٹاک پر کونسل", "ٹک ٹاک تے کونسل"],
+  ["Join", "شامل ہوں", "شامل تھیوو"],
+  ["Saraiki Student Council emblem", "سرائیکی طلبہ کونسل کا نشان", "سرائیکی طلبہ کونسل دا نشان"],
+  // ----- Poetry -----
+  ["Poetry", "شاعری", "شاعری"],
+  ["Saraiki poetry", "سرائیکی شاعری", "سرائیکی شاعری"],
+  ["Voices of the Wasaib", "وسیب کی آوازیں", "وسیب دیاں آوازاں"],
+  ["Verses in our mother tongue.", "ہماری مادری زبان کے اشعار۔", "ساݙی ماء ٻولی دے شعر۔"],
+  ["Ghazals in Saraiki from poets of many faiths and walks of life, gathered by the council. Each closing couplet carries the poet’s pen name.", "مختلف مذاہب اور طبقوں کے شعرا کی سرائیکی غزلیں، جنہیں کونسل نے یکجا کیا ہے۔ ہر غزل کے مقطع میں شاعر کا تخلص آتا ہے۔", "وکھو وکھ مذہباں تے طبقیاں دے شاعراں دیاں سرائیکی غزلاں، جنہاں کوں کونسل کٹھا کیتے۔ ہر غزل دے مقطعے وچ شاعر دا تخلص آندے۔"],
+  ["{count} poems", "{count} غزلیں", "{count} غزلاں"],
+  ["Poets", "شعرا", "شاعر"],
+  ["Read the poetry", "شاعری پڑھیں", "شاعری پڑھو"],
+  ["Share", "شیئر کریں", "شیئر کرو"],
+  ["Copied", "کاپی ہو گیا", "کاپی تھی ڳیا"],
+  ["View the council emblem", "کونسل کا نشان دیکھیں", "کونسل دا نشان ݙیکھو"],
+  ["Close preview", "پیش نظارہ بند کریں", "پیش نظارہ بند کرو"],
 ];
 
 export const messages: Record<'ur' | 'skr', Record<string, string>> = { ur: {}, skr: {} };

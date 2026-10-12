@@ -9,6 +9,7 @@ import {
 } from './i18n/translations';
 import { assets } from './assets';
 import { dateLocale, setActiveLocale, tr } from './i18n/tr';
+import { poems, type Poem } from './poetry';
 
 type StaffUser = { id: string; email: string; role: string };
 type MemberProfile = { id: string; memberNumber?: string; fullName: string; studentId: string; department: string; semester: string; preferredLanguage: Locale };
@@ -194,6 +195,62 @@ function StarMark({ className = '' }: { className?: string }) {
   );
 }
 
+const LOGO_PREVIEW_EVENT = 'ssc:logo-preview';
+
+function Logo({ className = 'h-11 w-11', label }: { className?: string; label?: string }) {
+  // The emblem has a transparent background and reads on both light and dark surfaces.
+  return (
+    <button
+      type="button"
+      aria-label={label ?? tr('View the council emblem')}
+      onClick={(event) => { event.preventDefault(); event.stopPropagation(); window.dispatchEvent(new Event(LOGO_PREVIEW_EVENT)); }}
+      className={`logo-button grid shrink-0 cursor-zoom-in place-items-center rounded-full transition duration-300 hover:scale-105 active:scale-95 ${className}`}
+    >
+      <img src={assets.logo} alt="" className="h-full w-full object-contain drop-shadow-[0_3px_6px_rgba(9,31,27,0.28)]" />
+    </button>
+  );
+}
+
+function LogoPreview() {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const show = () => setOpen(true);
+    window.addEventListener(LOGO_PREVIEW_EVENT, show);
+    return () => window.removeEventListener(LOGO_PREVIEW_EVENT, show);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label={tr('Saraiki Student Council emblem')} className="fixed inset-0 z-50 grid place-items-center p-5">
+      <button type="button" aria-label={tr('Close preview')} onClick={() => setOpen(false)} className="sheet-backdrop pattern-ajrak absolute inset-0 cursor-zoom-out bg-[#091f1b]/90 backdrop-blur-md" />
+      <figure className="preview-pop pointer-events-none relative flex max-h-full w-full max-w-xl flex-col items-center">
+        <img src={assets.logoLarge} alt={tr('Saraiki Student Council emblem')} className="max-h-[70vh] w-auto max-w-full object-contain drop-shadow-[0_24px_48px_rgba(0,0,0,0.55)]" />
+        <figcaption className="mt-6 text-center text-ivory">
+          <p className="font-display text-2xl sm:text-3xl">{tr('Saraiki Student Council')}</p>
+          <p className="mt-1.5 text-[11px] uppercase tracking-[0.24em] text-gold">{tr('Leads University · Lahore')}</p>
+        </figcaption>
+      </figure>
+      <button type="button" autoFocus onClick={() => setOpen(false)} aria-label={tr('Close preview')} className="absolute end-4 top-4 grid h-12 w-12 place-items-center rounded-full bg-white/10 text-ivory ring-1 ring-white/20 transition hover:bg-gold hover:text-[#0f2b25] active:scale-95 sm:end-6 sm:top-6">
+        <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+      </button>
+    </div>
+  );
+}
+
 function ArrowIcon({ className = '' }: { className?: string }) {
   return (
     <svg viewBox="0 0 20 20" className={`arrow-icon ${className}`} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -209,7 +266,10 @@ function ScrollChrome() {
 
   useEffect(() => {
     // jsdom (the test environment) has no scrolling.
-    if (!navigator.userAgent.includes('jsdom')) window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    if (navigator.userAgent.includes('jsdom')) return;
+    const target = window.location.hash ? document.getElementById(decodeURIComponent(window.location.hash.slice(1))) : null;
+    if (target) target.scrollIntoView();
+    else window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [pathname]);
 
   useEffect(() => {
@@ -233,7 +293,7 @@ function ScrollChrome() {
         aria-label={tr('Back to top')}
         tabIndex={showTop ? 0 : -1}
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        className={`fixed bottom-6 end-6 z-30 grid h-12 w-12 place-items-center rounded-full bg-emerald text-gold shadow-soft ring-1 ring-gold/40 transition duration-300 hover:-translate-y-1 hover:bg-[#0f2b25] ${showTop ? 'opacity-100' : 'pointer-events-none translate-y-3 opacity-0'}`}
+        className={`fixed bottom-24 end-4 z-20 grid h-12 w-12 lg:bottom-6 lg:end-6 place-items-center rounded-full bg-emerald text-gold shadow-soft ring-1 ring-gold/40 transition duration-300 hover:-translate-y-1 hover:bg-[#0f2b25] ${showTop ? 'opacity-100' : 'pointer-events-none translate-y-3 opacity-0'}`}
       >
         <ArrowIcon className="h-5 w-5 -rotate-90" />
       </button>
@@ -270,14 +330,14 @@ function ContactChannels() {
   ];
 
   return (
-    <dl className="grid gap-3 text-sm">
+    <dl className="grid grid-cols-1 gap-3 text-sm">
       {rows.map((row) => {
         const content = (
           <>
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald text-gold"><ContactIcon name={row.icon} /></span>
             <span className="min-w-0 flex-1">
               <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gold">{tr(row.label)}</dt>
-              <dd className="mt-0.5 truncate font-medium text-emerald"><bdi dir={row.icon === 'location' || row.icon === 'facebook' ? undefined : 'ltr'}>{tr(row.value)}</bdi></dd>
+              <dd className="mt-0.5 break-words font-medium leading-snug text-emerald [overflow-wrap:anywhere]"><bdi dir={row.icon === 'location' || row.icon === 'facebook' ? undefined : 'ltr'}>{tr(row.value)}</bdi></dd>
             </span>
             {row.href && <ArrowIcon className="h-4 w-4 shrink-0 text-emerald/40" />}
           </>
@@ -293,8 +353,8 @@ function ContactChannels() {
 
 function PageShell({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="page-shell mx-auto max-w-7xl px-5 pb-16 pt-6 sm:px-8 lg:px-12">
-      <div className="pattern-ajrak relative mb-10 overflow-hidden rounded-[1.75rem] bg-emerald px-6 py-10 text-ivory shadow-soft sm:px-10 sm:py-14">
+    <div className="page-shell mx-auto max-w-7xl px-4 pb-14 pt-4 sm:px-8 sm:pt-6 lg:px-12">
+      <div className="pattern-ajrak relative mb-10 overflow-hidden rounded-[1.75rem] bg-emerald px-5 py-8 text-ivory shadow-soft sm:px-10 sm:py-14">
         <div aria-hidden="true" className="absolute -end-16 -top-20 h-64 w-64 rounded-full bg-gold/20 blur-3xl" />
         <div aria-hidden="true" className="absolute -bottom-24 start-1/3 h-56 w-56 rounded-full bg-maroon/40 blur-3xl" />
         <div className="relative">
@@ -302,7 +362,7 @@ function PageShell({ title, children }: { title: string; children: React.ReactNo
             <StarMark className="h-4 w-4" />
             {tr('Saraiki Student Council · Leads University')}
           </p>
-          <h1 className="mt-4 max-w-4xl font-display text-4xl leading-[1.05] text-ivory sm:text-6xl">{title}</h1>
+          <h1 className="mt-3 max-w-4xl break-words font-display text-[2.1rem] leading-[1.08] text-ivory sm:mt-4 sm:text-6xl">{title}</h1>
         </div>
       </div>
       <div className="page-enter">{children}</div>
@@ -350,8 +410,8 @@ function LanguageSwitcher({
   onChange: (value: Locale) => void;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-full border border-emerald/15 bg-white/80 py-1 pe-1 ps-3 shadow-sm">
-      <svg viewBox="0 0 20 20" className="h-4 w-4 text-emerald/60" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <div className="flex items-center gap-1.5 rounded-full border border-emerald/15 bg-white/80 py-1 pe-1 ps-2.5 shadow-sm sm:gap-2 sm:ps-3">
+      <svg viewBox="0 0 20 20" className="hidden h-4 w-4 text-emerald/60 min-[420px]:block" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5">
         <circle cx="10" cy="10" r="7.5" />
         <path d="M2.5 10h15M10 2.5c2.2 2.1 3.2 4.6 3.2 7.5s-1 5.4-3.2 7.5c-2.2-2.1-3.2-4.6-3.2-7.5s1-5.4 3.2-7.5z" />
       </svg>
@@ -371,19 +431,39 @@ function LanguageSwitcher({
   );
 }
 
+function TabIcon({ name, className = 'h-6 w-6' }: { name: 'home' | 'events' | 'join' | 'culture' | 'poetry' | 'menu' | 'close' | 'people' | 'news' | 'about' | 'member'; className?: string }) {
+  const paths: Record<string, string> = {
+    home: 'M4 11.5 12 4l8 7.5M6.5 10v9.5h4v-5h3v5h4V10',
+    events: 'M5 6.5h14v13H5zM5 10.5h14M9 4v4M15 4v4',
+    join: 'M12 5v14M5 12h14',
+    culture: 'M12 6.5c-2-1.300-4.500-1.500-7-1v12.500c2.500-.5 5-.300 7 1 2-1.300 4.500-1.500 7-1V5.500c-2.500-.5-5-.300-7 1zM12 6.500V19',
+    poetry: 'M19 4.500c-6 0-10.500 4-11.500 11l-1 4M7.500 15.500c4 0 7-1.500 8.500-4.500M10 11.500c2.500 0 4.500-.800 6-2.500',
+    menu: 'M5 7h14M5 12h14M5 17h9',
+    close: 'M6 6l12 12M18 6 6 18',
+    people: 'M9 11.500a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3.500 19c.500-3 2.700-4.500 5.500-4.500s5 1.500 5.500 4.500M16 11.500a2.500 2.500 0 1 0 0-5M17 14.700c1.900.400 3.100 1.800 3.500 4.300',
+    news: 'M4.500 9.500v5l3 .5 5.500 3.500v-13L7.500 9zM16 9.500c1 .700 1.500 1.500 1.500 2.500s-.5 1.800-1.500 2.500',
+    about: 'M12 20.500a8.500 8.500 0 1 0 0-17 8.500 8.500 0 0 0 0 17zM12 11v5.500M12 7.800v.2',
+    member: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.500 20c.800-3.500 3.700-5 7.500-5s6.700 1.500 7.500 5',
+  };
+  return <svg viewBox="0 0 24 24" className={className} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={paths[name].replace(/(\.\d)00(?!\d)/g, '$1')} /></svg>;
+}
+
 function Header({ locale, onLocaleChange }: { locale: Locale; onLocaleChange: (value: Locale) => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { pathname } = useLocation();
+  const t = translations[locale];
   const navItems = useMemo(
     () => [
-      { to: '/', label: translations[locale].home },
-      { to: '/about', label: translations[locale].about },
-      { to: '/leadership', label: translations[locale].leadership },
-      { to: '/cabinet', label: translations[locale].cabinet },
-      { to: '/events', label: translations[locale].events },
-      { to: '/culture', label: translations[locale].culture },
-      { to: '/announcements', label: translations[locale].announcements },
-      { to: '/contact', label: translations[locale].contact },
+      { to: '/', label: translations[locale].home, icon: 'home' as const },
+      { to: '/about', label: translations[locale].about, icon: 'about' as const },
+      { to: '/leadership', label: translations[locale].leadership, icon: 'people' as const },
+      { to: '/cabinet', label: translations[locale].cabinet, icon: 'people' as const },
+      { to: '/events', label: translations[locale].events, icon: 'events' as const },
+      { to: '/culture', label: translations[locale].culture, icon: 'culture' as const },
+      { to: '/poetry', label: translations[locale].poetry, icon: 'poetry' as const },
+      { to: '/announcements', label: translations[locale].announcements, icon: 'news' as const },
+      { to: '/contact', label: translations[locale].contact, icon: 'about' as const },
     ],
     [locale],
   );
@@ -395,59 +475,118 @@ function Header({ locale, onLocaleChange }: { locale: Locale; onLocaleChange: (v
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  return (
-    <header className={`site-header sticky top-0 z-20 border-b backdrop-blur-xl transition-all duration-300 ${scrolled ? 'is-scrolled border-emerald/10 bg-ivory/90' : 'border-transparent bg-ivory/70'}`} dir={getDirection(locale)}>
-      <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
-        <div className="flex items-center justify-between gap-4 py-3">
-          <NavLink to="/" className="group flex min-w-0 shrink-0 items-center gap-3">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-emerald text-gold shadow-sm ring-1 ring-gold/40 transition duration-500 group-hover:rotate-45">
-              <StarMark className="h-6 w-6" />
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate font-display text-lg leading-tight text-emerald sm:text-xl">{translations[locale].siteName}</span>
-              <span className="mt-0.5 block truncate text-[9px] uppercase tracking-[0.24em] text-emerald/60 sm:text-[10px]">{translations[locale].subtitle}</span>
-            </span>
-          </NavLink>
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
 
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <LanguageSwitcher locale={locale} onChange={onLocaleChange} />
-            <NavLink to="/join" className="hidden rounded-full bg-emerald px-5 py-2.5 text-sm font-semibold text-ivory shadow-sm transition hover:-translate-y-0.5 hover:bg-maroon sm:inline-flex">
-              {translations[locale].join}
-            </NavLink>
-            <button
-              type="button"
-              className="rounded-full border border-emerald/20 bg-white/70 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald lg:hidden"
-              aria-controls="site-navigation"
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((open) => !open)}
-            >
-              {menuOpen ? translations[locale].close : translations[locale].menu}
-            </button>
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setMenuOpen(false); };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
+
+  const tabClass = ({ isActive }: { isActive: boolean }) => `tab-item flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-semibold transition ${isActive ? 'is-active text-emerald' : 'text-emerald/55'}`;
+
+  return (
+    <>
+      <header className={`site-header sticky top-0 z-20 border-b backdrop-blur-xl transition-all duration-300 ${scrolled ? 'is-scrolled border-emerald/10 bg-ivory/90' : 'border-transparent bg-ivory/70'}`} dir={getDirection(locale)}>
+        <div className="mx-auto max-w-7xl px-4 sm:px-8 lg:px-12">
+          <div className="flex items-center justify-between gap-3 py-2.5 sm:py-3">
+            <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+              <Logo className="h-11 w-11 sm:h-[3.25rem] sm:w-[3.25rem]" />
+              <NavLink to="/" className="min-w-0">
+                <span className="block truncate font-display text-[0.98rem] leading-tight text-emerald sm:text-xl">{t.siteName}</span>
+                <span className="mt-0.5 block truncate text-[9px] uppercase tracking-[0.2em] text-emerald/60 sm:text-[10px] sm:tracking-[0.24em]">{t.subtitle}</span>
+              </NavLink>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+              <LanguageSwitcher locale={locale} onChange={onLocaleChange} />
+              <NavLink to="/join" className="hidden rounded-full bg-emerald px-5 py-2.5 text-sm font-semibold text-ivory shadow-sm transition hover:-translate-y-0.5 hover:bg-maroon lg:inline-flex">
+                {t.join}
+              </NavLink>
+            </div>
+          </div>
+
+          <nav id="site-navigation" aria-label={t.navLabel} className="hidden border-t border-emerald/10 py-2 lg:flex lg:flex-wrap lg:items-center lg:gap-1">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === '/'}
+                className={({ isActive }) => `nav-link whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium transition ${isActive ? 'is-active bg-emerald/[0.07] text-emerald' : 'text-emerald/75 hover:bg-emerald/[0.05] hover:text-emerald'}`}
+              >
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+        </div>
+      </header>
+
+      {/* Phone and tablet: app-style tab bar */}
+      <nav aria-label={t.navLabel} dir={getDirection(locale)} className="tab-bar fixed inset-x-0 bottom-0 z-30 border-t border-emerald/10 bg-ivory/90 backdrop-blur-xl lg:hidden">
+        <div className="mx-auto flex h-16 max-w-lg items-stretch px-2">
+          <NavLink to="/" end className={tabClass}><TabIcon name="home" /><span>{t.home}</span></NavLink>
+          <NavLink to="/events" className={tabClass}><TabIcon name="events" /><span>{t.events}</span></NavLink>
+          <NavLink to="/join" className="flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-semibold text-emerald">
+            <span className="-mt-7 grid h-14 w-14 place-items-center rounded-full bg-gold text-[#0f2b25] shadow-lg shadow-emerald/30 ring-4 ring-ivory transition active:scale-95"><TabIcon name="join" className="h-7 w-7" /></span>
+            <span>{tr('Join')}</span>
+          </NavLink>
+          <NavLink to="/culture" className={tabClass}><TabIcon name="culture" /><span>{tr('Culture')}</span></NavLink>
+          <button type="button" aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)} className="tab-item flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-semibold text-emerald/55">
+            <TabIcon name="menu" /><span>{t.menu}</span>
+          </button>
+        </div>
+      </nav>
+
+      {menuOpen && (
+        <div role="dialog" aria-modal="true" aria-label={t.menu} dir={getDirection(locale)} className="fixed inset-0 z-40 lg:hidden">
+          <button type="button" aria-label={t.close} onClick={() => setMenuOpen(false)} className="sheet-backdrop absolute inset-0 bg-[#091f1b]/60 backdrop-blur-sm" />
+          <div className="sheet-panel pattern-ajrak absolute inset-x-0 bottom-0 max-h-[92vh] overflow-y-auto rounded-t-[2rem] bg-emerald text-ivory shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between bg-emerald/95 px-5 pb-3 pt-3 backdrop-blur">
+              <span aria-hidden="true" className="absolute left-1/2 top-2 h-1 w-10 -translate-x-1/2 rounded-full bg-ivory/25" />
+              <p className="mt-3 flex items-center gap-3 font-display text-2xl"><Logo className="h-10 w-10" />{t.menu}</p>
+              <button type="button" onClick={() => setMenuOpen(false)} aria-label={t.close} className="mt-3 grid h-11 w-11 place-items-center rounded-full bg-white/10 ring-1 ring-white/15 active:scale-95"><TabIcon name="close" className="h-5 w-5" /></button>
+            </div>
+
+            <div className="px-5 pb-8">
+              <div className="grid grid-cols-2 gap-3">
+                {navItems.map((item) => (
+                  <NavLink key={item.to} to={item.to} end={item.to === '/'} onClick={() => setMenuOpen(false)} className={({ isActive }) => `flex min-h-[4.5rem] flex-col justify-between gap-2 rounded-2xl p-4 text-sm font-semibold ring-1 transition active:scale-[0.98] ${isActive ? 'bg-gold text-[#0f2b25] ring-gold' : 'bg-white/[0.07] text-ivory ring-white/10'}`}>
+                    <TabIcon name={item.icon} className="h-5 w-5 opacity-80" />
+                    <span>{item.label}</span>
+                  </NavLink>
+                ))}
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <NavLink to="/join" onClick={() => setMenuOpen(false)} className="flex min-h-[3.25rem] items-center justify-center gap-2 rounded-2xl bg-gold px-4 text-sm font-semibold text-[#0f2b25] active:scale-[0.98]"><TabIcon name="join" className="h-5 w-5" />{t.join}</NavLink>
+                <NavLink to="/member" onClick={() => setMenuOpen(false)} className="flex min-h-[3.25rem] items-center justify-center gap-2 rounded-2xl bg-white/[0.07] px-4 text-sm font-semibold ring-1 ring-white/10 active:scale-[0.98]"><TabIcon name="member" className="h-5 w-5" />{tr('Member portal')}</NavLink>
+              </div>
+
+              <p className="mt-7 text-[11px] font-semibold uppercase tracking-[0.2em] text-gold">{t.language}</p>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {supportedLocales.map((value) => (
+                  <button key={value} type="button" aria-pressed={locale === value} onClick={() => onLocaleChange(value)} className={`min-h-[3rem] rounded-2xl text-sm font-semibold ring-1 transition active:scale-[0.98] ${locale === value ? 'bg-ivory text-emerald ring-ivory' : 'bg-white/[0.07] text-ivory ring-white/10'}`}>
+                    {localeLabels[value]}
+                  </button>
+                ))}
+              </div>
+
+              <p className="mt-7 text-[11px] font-semibold uppercase tracking-[0.2em] text-gold">{tr('Reach us directly')}</p>
+              <div className="mt-3 flex items-center gap-3">
+                <a href={`tel:${councilContacts.chairmanPhone.replace(/\s/g, '')}`} className="flex min-h-[3rem] flex-1 items-center justify-center gap-2 rounded-2xl bg-white/[0.07] px-4 text-sm font-semibold ring-1 ring-white/10 active:scale-[0.98]"><ContactIcon name="phone" className="h-4 w-4" /><bdi dir="ltr">{councilContacts.chairmanPhone}</bdi></a>
+                <a href={councilContacts.facebook} target="_blank" rel="noopener noreferrer" aria-label={tr('Council on Facebook')} className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/[0.07] ring-1 ring-white/10 active:scale-95"><ContactIcon name="facebook" /></a>
+                <a href={councilContacts.tiktok} target="_blank" rel="noopener noreferrer" aria-label={tr('Council on TikTok')} className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/[0.07] ring-1 ring-white/10 active:scale-95"><ContactIcon name="tiktok" /></a>
+              </div>
+            </div>
           </div>
         </div>
-
-        <nav
-          id="site-navigation"
-          aria-label={translations[locale].navLabel}
-          className={`${menuOpen ? 'grid' : 'hidden'} grid-cols-2 gap-x-4 gap-y-1 border-t border-emerald/10 py-4 lg:flex lg:items-center lg:gap-1 lg:py-2`}
-        >
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              onClick={() => setMenuOpen(false)}
-              className={({ isActive }) => `nav-link whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium transition ${isActive ? 'is-active bg-emerald/[0.07] text-emerald' : 'text-emerald/75 hover:bg-emerald/[0.05] hover:text-emerald'}`}
-            >
-              {item.label}
-            </NavLink>
-          ))}
-          <NavLink to="/join" onClick={() => setMenuOpen(false)} className="col-span-2 mt-2 rounded-full bg-emerald px-5 py-3 text-center text-sm font-semibold text-ivory sm:hidden">
-            {translations[locale].join}
-          </NavLink>
-        </nav>
-      </div>
-    </header>
+      )}
+    </>
   );
 }
 
@@ -457,10 +596,10 @@ function Footer() {
     <footer className="mt-16 bg-[#0f2b25] text-ivory">
       <div aria-hidden="true" className="pattern-ajrak h-3 bg-gold/80" />
       <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
-        <div className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
-          <div>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-9 py-12 sm:py-14 lg:grid-cols-[1.4fr_1fr_1fr_1fr] lg:gap-10">
+          <div className="col-span-2 lg:col-span-1">
             <div className="flex items-center gap-3">
-              <span className="grid h-11 w-11 place-items-center rounded-full bg-gold/15 text-gold ring-1 ring-gold/40"><StarMark className="h-6 w-6" /></span>
+              <Logo className="h-14 w-14" />
               <h2 className="font-display text-2xl">{tr('Saraiki Student Council')}</h2>
             </div>
             <p className="mt-4 max-w-sm text-sm leading-6 text-ivory/70">{tr('A heritage-minded student leadership platform for campus life and community voice.')}</p>
@@ -478,6 +617,7 @@ function Footer() {
               <li><NavLink className={linkClass} to="/cabinet">{tr('Cabinet')}</NavLink></li>
               <li><NavLink className={linkClass} to="/events">{tr('Events')}</NavLink></li>
               <li><NavLink className={linkClass} to="/culture">{tr('Culture')}</NavLink></li>
+              <li><NavLink className={linkClass} to="/poetry">{tr('Poetry')}</NavLink></li>
               <li><NavLink className={linkClass} to="/announcements">{tr('Announcements')}</NavLink></li>
             </ul>
           </div>
@@ -491,9 +631,9 @@ function Footer() {
               <li><NavLink className={linkClass} to="/terms">{tr('Terms of Use')}</NavLink></li>
             </ul>
           </div>
-          <div>
+          <div className="col-span-2 lg:col-span-1">
             <h3 className="text-xs font-semibold uppercase tracking-[0.22em] text-gold">{tr('Council staff')}</h3>
-            <ul className="mt-4 space-y-2.5 text-sm">
+            <ul className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2.5 text-sm lg:block lg:space-y-2.5">
               <li><NavLink className={linkClass} to="/council/review">{tr('Council staff portal')}</NavLink></li>
               <li><NavLink className={linkClass} to="/council/events">{tr('Event manager')}</NavLink></li>
               <li><NavLink className={linkClass} to="/council/content">{tr('Content desk')}</NavLink></li>
@@ -518,14 +658,14 @@ function AnnouncementStrip({ locale }: { locale: Locale }) {
 
   return (
     <div className="bg-maroon text-ivory">
-      <div className="mx-auto flex max-w-7xl flex-col gap-1 px-5 py-2.5 text-xs sm:flex-row sm:items-center sm:gap-6 sm:px-8 lg:px-12">
+      <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-2.5 text-xs sm:gap-6 sm:px-8 lg:px-12">
         <span className="flex shrink-0 items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-gold">
           <span className="live-dot" aria-hidden="true" />
           {tr('Latest')}
         </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:gap-6">
+        <div className="no-scrollbar flex min-w-0 flex-1 snap-x gap-6 overflow-x-auto whitespace-nowrap">
           {notices.map((item) => (
-            <Link key={item.id} to={`/announcements/${item.slug}`} className="truncate text-ivory/90 underline-offset-4 hover:text-gold hover:underline">{item.title}</Link>
+            <Link key={item.id} to={`/announcements/${item.slug}`} className="shrink-0 snap-start text-ivory/90 underline-offset-4 hover:text-gold hover:underline lg:shrink lg:truncate">{item.title}</Link>
           ))}
         </div>
       </div>
@@ -583,32 +723,46 @@ function HomePage({ locale }: { locale: Locale }) {
   return (
     <>
       <AnnouncementStrip locale={locale} />
-      <main className="home-main mx-auto max-w-7xl space-y-24 px-5 pb-10 pt-6 sm:px-8 lg:space-y-28 lg:px-12">
+      <main className="home-main mx-auto max-w-7xl space-y-16 px-4 pb-10 pt-4 sm:space-y-24 sm:px-8 sm:pt-6 lg:space-y-28 lg:px-12">
         <section className="pattern-ajrak relative overflow-hidden rounded-[2rem] bg-emerald text-ivory shadow-soft">
           <div aria-hidden="true" className="absolute -end-24 -top-24 h-96 w-96 rounded-full bg-gold/25 blur-3xl" />
           <div aria-hidden="true" className="absolute -bottom-32 -start-20 h-96 w-96 rounded-full bg-maroon/50 blur-3xl" />
-          <div className="relative grid items-center gap-10 px-6 py-10 sm:px-10 sm:py-14 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 lg:px-14 lg:py-16">
+          <div className="relative grid items-center gap-9 px-5 pb-8 pt-7 sm:gap-10 sm:px-10 sm:py-14 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 lg:px-14 lg:py-16">
             <div className="hero-enter order-2 lg:order-1">
               <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-gold ring-1 ring-white/15">
                 <StarMark className="h-3.5 w-3.5" />
-                {t.home} <span className="text-ivory/40">/</span> {tr('Leads University, Lahore')}
+                <span className="hidden sm:inline">{t.home} <span className="text-ivory/40">/</span></span> {tr('Leads University, Lahore')}
               </p>
-              <h1 className="mt-6 font-display text-[2.6rem] leading-[1.04] text-ivory sm:text-6xl xl:text-[4.25rem]">
+              <h1 className="mt-5 font-display text-[2.35rem] leading-[1.06] text-ivory sm:mt-6 sm:text-6xl xl:text-[4.25rem]">
                 {t.heroTitle}
               </h1>
               <p className="mt-6 max-w-lg text-base leading-7 text-ivory/75 sm:text-lg">{t.heroText}</p>
 
-              <div className="mt-9 flex flex-wrap gap-4">
-                <NavLink to="/join" className="btn-shine inline-flex items-center gap-2 rounded-full bg-gold px-7 py-3.5 font-semibold text-[#0f2b25] shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:bg-[#d8ba75]">
+              <div className="mt-8 flex flex-wrap gap-3 sm:mt-9 sm:gap-4 [&>a]:flex-1 [&>a]:justify-center sm:[&>a]:flex-none">
+                <NavLink to="/join" className="btn-shine inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-gold px-5 py-3.5 text-sm font-semibold text-[#0f2b25] sm:px-7 sm:text-base shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:bg-[#d8ba75]">
                   {t.joinUs}
                 </NavLink>
-                <NavLink to="/events" className="link-arrow inline-flex items-center gap-2 rounded-full border border-ivory/30 px-7 py-3.5 font-semibold text-ivory transition hover:border-gold hover:text-gold">
+                <NavLink to="/events" className="link-arrow inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-ivory/30 px-5 py-3.5 text-sm font-semibold text-ivory sm:px-7 sm:text-base transition hover:border-gold hover:text-gold">
                   {t.exploreEvents}
                   <ArrowIcon className="h-4 w-4" />
                 </NavLink>
               </div>
 
-              <div className="mt-10 grid max-w-lg grid-cols-3 gap-3 border-t border-ivory/15 pt-6">
+              {nextEvent && (
+                <Link to={`/events/${nextEvent.slug}`} className="link-arrow mt-6 flex items-center gap-3 rounded-2xl bg-white/10 p-3.5 ring-1 ring-white/15 active:scale-[0.99] sm:hidden">
+                  <span className="rounded-xl bg-ivory px-3 py-1.5 text-center text-emerald">
+                    <span className="block text-[9px] font-semibold uppercase tracking-[0.16em] text-maroon">{new Date(nextEvent.startsAt).toLocaleDateString(dateLocale(), { month: 'short' })}</span>
+                    <span className="block font-display text-xl leading-none">{new Date(nextEvent.startsAt).getDate()}</span>
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-gold"><span className="live-dot" aria-hidden="true" />{tr('Next up')}</span>
+                    <span className="mt-0.5 block truncate font-display text-base">{tr(nextEvent.title)}</span>
+                  </span>
+                  <ArrowIcon className="h-4 w-4 shrink-0 text-gold" />
+                </Link>
+              )}
+
+              <div className="mt-8 grid max-w-lg grid-cols-3 gap-3 border-t border-ivory/15 pt-6 sm:mt-10">
                 {impactStats.map((item) => (
                   <div key={item.label}>
                     <p className="font-display text-4xl text-gold">{item.value}</p>
@@ -618,15 +772,18 @@ function HomePage({ locale }: { locale: Locale }) {
               </div>
             </div>
 
-            <div className="hero-enter-late relative order-1 mx-auto w-full max-w-sm lg:order-2 lg:max-w-md">
+            <div className="hero-enter-late relative order-1 mx-auto w-full max-w-[16.5rem] sm:max-w-sm lg:order-2 lg:max-w-md">
               <div aria-hidden="true" className="arch absolute -inset-3 border border-gold/50" />
               <div className="arch float-slow relative overflow-hidden bg-[#e9e3d6] shadow-2xl shadow-black/40 ring-1 ring-gold/40">
                 <img src={assets.heritageScene} alt={tr('Collage of Saraiki heritage: ajrak, Multani blue pottery, shrine architecture, and music')} className="aspect-[4/5] w-full object-cover object-top" />
               </div>
 
-              <div className="absolute -bottom-5 -start-3 max-w-[15rem] rounded-2xl bg-ivory p-4 text-emerald shadow-xl ring-1 ring-black/5 sm:-start-8">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-maroon">{tr('Our council')}</p>
-                <p className="mt-1.5 font-display text-lg leading-snug">{tr('Culture, voice, and belonging.')}</p>
+              <div className="absolute -bottom-5 -start-6 flex max-w-[15rem] items-center gap-3 rounded-2xl bg-ivory p-3 text-emerald shadow-xl ring-1 ring-black/5 sm:-start-8 sm:max-w-[18rem] sm:p-3.5">
+                <Logo className="h-14 w-14 sm:h-16 sm:w-16" />
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-maroon">{tr('Our council')}</p>
+                  <p className="mt-1 font-display text-base leading-snug sm:text-lg">{tr('Culture, voice, and belonging.')}</p>
+                </div>
               </div>
 
               {nextEvent && (
@@ -657,7 +814,7 @@ function HomePage({ locale }: { locale: Locale }) {
           />
           {events.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-emerald/20 bg-white/50 px-6 py-10 text-center text-sm text-charcoal/60">{tr('New events will be announced here.')}</p>
-          ) : <div className="grid gap-6 md:grid-cols-3">
+          ) : <div className="mobile-carousel grid gap-6 md:grid-cols-3">
             {events.map((event, index) => (
               <Reveal key={event.id} delay={index * 90}>
                 <article className="card-lift group flex h-full flex-col overflow-hidden rounded-3xl border border-emerald/10 bg-white">
@@ -721,6 +878,8 @@ function HomePage({ locale }: { locale: Locale }) {
           )}
         </section>
 
+        <PoetrySpotlight />
+
         <section>
           <SectionHeader
             eyebrow={tr('People')}
@@ -728,7 +887,7 @@ function HomePage({ locale }: { locale: Locale }) {
             description={tr('The council brings together students, mentors, and volunteers dedicated to belonging, representation, and cultural stewardship.')}
             action={<SectionLink to="/cabinet">{tr('Full cabinet')}</SectionLink>}
           />
-          {leaders.length === 0 ? <p className="rounded-2xl border border-dashed border-emerald/20 bg-white/50 px-6 py-10 text-center text-sm text-charcoal/60">{tr('Council profiles will be added as they are approved for publication.')}</p> : <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">{leaders.slice(0, 4).map((profile, index) => <Reveal key={profile.id} delay={index * 90}><article className="card-lift group relative h-[26rem] overflow-hidden rounded-3xl bg-emerald text-ivory">{profile.imageUrl || cabinetPortraits[profile.title] ? <img src={profile.imageUrl || cabinetPortraits[profile.title]} alt="" loading="lazy" className="zoom-target absolute inset-0 h-full w-full object-cover object-top" /> : <div className="pattern-ajrak absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald to-[#0f2b25]"><span className="font-display text-7xl text-gold">{profile.title.slice(0, 1)}</span></div>}<div className="absolute inset-0 bg-gradient-to-t from-[#091f1b] via-[#091f1b]/35 to-transparent" /><div className="absolute inset-x-0 bottom-0 p-6"><p className="inline-block rounded-full bg-gold px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#0f2b25]">{tr(profile.roleTitle || 'Council member')}</p><h3 className="mt-3 font-display text-2xl">{tr(profile.title)}</h3><p className="mt-1.5 text-sm leading-6 text-ivory/75">{tr(profile.summary)}</p></div></article></Reveal>)}</div>}
+          {leaders.length === 0 ? <p className="rounded-2xl border border-dashed border-emerald/20 bg-white/50 px-6 py-10 text-center text-sm text-charcoal/60">{tr('Council profiles will be added as they are approved for publication.')}</p> : <div className="mobile-carousel grid gap-6 sm:grid-cols-2 lg:grid-cols-4">{leaders.slice(0, 4).map((profile, index) => <Reveal key={profile.id} delay={index * 90}><article className="card-lift group relative h-[26rem] overflow-hidden rounded-3xl bg-emerald text-ivory">{profile.imageUrl || cabinetPortraits[profile.title] ? <img src={profile.imageUrl || cabinetPortraits[profile.title]} alt="" loading="lazy" className="zoom-target absolute inset-0 h-full w-full object-cover object-top" /> : <div className="pattern-ajrak absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald to-[#0f2b25]"><span className="font-display text-7xl text-gold">{profile.title.slice(0, 1)}</span></div>}<div className="absolute inset-0 bg-gradient-to-t from-[#091f1b] via-[#091f1b]/35 to-transparent" /><div className="absolute inset-x-0 bottom-0 p-6"><p className="inline-block rounded-full bg-gold px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#0f2b25]">{tr(profile.roleTitle || 'Council member')}</p><h3 className="mt-3 font-display text-2xl">{tr(profile.title)}</h3><p className="mt-1.5 text-sm leading-6 text-ivory/75">{tr(profile.summary)}</p></div></article></Reveal>)}</div>}
         </section>
 
         <section>
@@ -765,7 +924,7 @@ function HomePage({ locale }: { locale: Locale }) {
             description={tr('Moments from student gatherings, heritage showcases, and council-led community programming.')}
           />
           <Reveal>
-            <div className="grid auto-rows-[13rem] gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mobile-carousel gallery-row grid auto-rows-[13rem] gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {galleryCards.map((item) => (
                 <figure key={item.title} className={`group relative overflow-hidden rounded-3xl bg-emerald shadow-soft ${item.span}`}>
                   {item.image ? <img src={item.image} alt={tr(item.title)} loading="lazy" className={`zoom-target h-full w-full object-cover ${item.position ?? ''}`} /> : (
@@ -782,9 +941,9 @@ function HomePage({ locale }: { locale: Locale }) {
         </section>
 
         <Reveal>
-          <section className="relative overflow-hidden rounded-[2rem] border border-emerald/10 bg-white p-8 shadow-soft lg:p-12">
+          <section className="relative overflow-hidden rounded-[2rem] border border-emerald/10 bg-white p-5 shadow-soft sm:p-8 lg:p-12">
             <StarMark className="absolute -end-10 -top-10 h-56 w-56 text-emerald/[0.04]" />
-            <div className="relative grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+            <div className="relative grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center [&>*]:min-w-0">
               <div>
                 <p className="eyebrow text-xs font-semibold uppercase tracking-[0.24em] text-gold">{t.contact}</p>
                 <h2 className="mt-3 font-display text-3xl leading-tight text-emerald sm:text-[2.6rem]">{tr('Connect with the council')}</h2>
@@ -816,6 +975,7 @@ function AboutPage() {
       <div className="grid gap-6 md:grid-cols-2">
         <Reveal>
           <div className="h-full rounded-[2rem] border border-emerald/10 bg-white p-8 shadow-soft sm:p-10">
+            <Logo label={tr('Saraiki Student Council emblem')} className="float-end mb-3 ms-4 h-24 w-24 sm:h-32 sm:w-32" />
             <p className="eyebrow text-xs font-semibold uppercase tracking-[0.24em] text-gold">{tr('Who we are')}</p>
             <h2 className="mt-3 font-display text-3xl text-emerald sm:text-4xl">{tr('Our story')}</h2>
             <p className="mt-5 leading-7 text-charcoal/75">{tr('The council exists to strengthen student voice, celebrate heritage, and build a more connected campus culture.')}</p>
@@ -856,18 +1016,18 @@ function LeaderCard({ member, featured = false }: { member: CabinetMember; featu
   const initials = member.name.split(' ').map((part) => part[0]).join('').slice(0, 2);
 
   return (
-    <article className={`card-lift group relative overflow-hidden rounded-3xl bg-emerald text-ivory ${featured ? 'h-[30rem]' : 'h-[24rem]'}`}>
+    <article className={`card-lift group relative overflow-hidden rounded-3xl bg-emerald text-ivory ${featured ? 'h-[26rem] sm:h-[30rem]' : 'h-60 sm:h-[24rem]'}`}>
       {member.image ? (
         <img src={member.image} alt={tr(member.name)} loading="lazy" className="zoom-target absolute inset-0 h-full w-full object-cover object-top" />
       ) : (
-        <div className="pattern-ajrak absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald to-[#0f2b25] pb-16 font-display text-6xl text-gold">
+        <div className="pattern-ajrak absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald to-[#0f2b25] pb-16 font-display text-5xl text-gold sm:text-6xl">
           {initials}
         </div>
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-[#091f1b] via-[#091f1b]/30 to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
-        <p className="inline-block rounded-full bg-gold px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#0f2b25]">{tr(member.designation)}</p>
-        <h2 className={`mt-3 font-display ${featured ? 'text-3xl' : 'text-2xl'}`}>{tr(member.name)}</h2>
+      <div className={`absolute inset-x-0 bottom-0 ${featured ? 'p-5' : 'p-3.5'} sm:p-6`}>
+        <p className={`inline-block rounded-full bg-gold font-semibold uppercase text-[#0f2b25] ${featured ? 'px-3 py-1 text-[10px] tracking-[0.16em]' : 'px-2 py-0.5 text-[8.5px] tracking-[0.08em] sm:px-3 sm:py-1 sm:text-[10px] sm:tracking-[0.16em]'}`}>{tr(member.designation)}</p>
+        <h2 className={`font-display ${featured ? 'mt-3 text-3xl' : 'mt-2 text-lg leading-tight sm:mt-3 sm:text-2xl'}`}>{tr(member.name)}</h2>
       </div>
     </article>
   );
@@ -887,7 +1047,7 @@ function LeadershipPage({ locale }: { locale: Locale }) {
           <Link to="/cabinet" className="link-arrow mt-6 inline-flex items-center gap-2 text-sm font-semibold text-maroon">{tr('View the complete cabinet')}<ArrowIcon className="h-4 w-4" /></Link>
         </div>
 
-        <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="mobile-carousel grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {featuredLeaders.map((member, index) => (
             <Reveal key={member.id} delay={index * 90}>
               <LeaderCard member={member} featured />
@@ -903,7 +1063,7 @@ function LeadershipPage({ locale }: { locale: Locale }) {
             </div>
             <Link to="/cabinet" className="text-sm font-semibold text-maroon underline-offset-4 hover:underline">{tr('Open cabinet directory')}</Link>
           </div>
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 xl:grid-cols-4">
             {executiveLeaders.map((member, index) => <Reveal key={member.id} delay={(index % 4) * 70}><LeaderCard member={member} /></Reveal>)}
           </div>
         </section>
@@ -919,7 +1079,7 @@ function CabinetPage() {
         <p className="text-sm text-charcoal/65">{tr('Official council cabinet and leadership roster.')}</p>
         <Link to="/leadership" className="text-sm font-semibold text-maroon underline-offset-4 hover:underline">{tr('Back to leadership')}</Link>
       </div>
-      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-6 xl:grid-cols-4">
         {cabinetMembers.map((member, index) => (
           <Reveal key={member.id} delay={(index % 4) * 70}><LeaderCard member={member} /></Reveal>
         ))}
@@ -1021,7 +1181,7 @@ function EventDetailPage() {
       ) : (
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
           <div>
-            <EventCover event={event} className="h-64 rounded-3xl shadow-soft sm:h-96" />
+            <EventCover event={event} className="h-52 rounded-3xl shadow-soft sm:h-96" />
             <p className="mt-6 text-xs font-semibold uppercase tracking-[0.2em] text-gold">{new Date(event.startsAt).toLocaleString(dateLocale(), { dateStyle: 'full', timeStyle: 'short' })}</p>
             <h2 className="mt-3 font-display text-4xl leading-tight text-emerald sm:text-5xl">{tr(event.title)}</h2>
             <p className="mt-5 whitespace-pre-line text-base leading-7 text-charcoal/75">{tr(event.description)}</p>
@@ -1030,7 +1190,7 @@ function EventDetailPage() {
               <div><p className="text-xs uppercase tracking-[0.16em] text-charcoal/50">{tr('Places')}</p><p className="mt-1 text-sm text-charcoal/80">{event.capacity ? tr('{remaining} of {capacity} remaining', { remaining: Math.max(event.capacity - event.registrationCount, 0), capacity: event.capacity }) : tr('Open registration')}</p></div>
             </div>
           </div>
-          <aside className="h-fit rounded-3xl border border-emerald/10 bg-white p-6 shadow-soft sm:p-8 lg:sticky lg:top-36">
+          <aside id="register" className="h-fit scroll-mt-24 rounded-3xl border border-emerald/10 bg-white p-5 shadow-soft sm:p-8 lg:sticky lg:top-36">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">{tr('Registration')}</p>
             <h3 className="mt-3 font-display text-3xl text-emerald">{tr('Save your place.')}</h3>
             {message ? <p role="status" className="mt-5 border-l-2 border-emerald bg-emerald/5 px-4 py-3 text-sm text-emerald">{message}</p> : event.registrationOpen && new Date(event.endsAt).getTime() >= Date.now() && (!event.capacity || event.registrationCount < event.capacity) ? (
@@ -1513,6 +1673,137 @@ function ContactInboxPage() {
         <div><div className="flex flex-col gap-4 border-b border-emerald/15 pb-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs uppercase tracking-[0.16em] text-charcoal/55">{tr('Signed in ·')} {staff.email}</p><h2 className="mt-2 font-display text-3xl text-emerald">{tr('Public enquiries')}</h2></div><div className="flex gap-4"><button type="button" onClick={() => void loadMessages()} className="text-sm font-semibold text-emerald underline">{tr('Refresh')}</button><button type="button" onClick={() => void signOut()} className="text-sm font-semibold text-maroon underline">{tr('Sign out')}</button></div></div>{error && <p role="alert" className="mt-4 text-sm text-maroon">{error}</p>}{messages.length === 0 ? <p className="py-12 text-center text-sm text-charcoal/60">{tr('The council inbox is clear.')}</p> : <div className="divide-y divide-emerald/10">{messages.map((message) => <article key={message.id} className={`py-6 ${message.readAt ? 'opacity-70' : ''}`}><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs uppercase tracking-[0.14em] text-gold">{message.readAt ? tr('Read') : tr('New')} · {new Date(message.createdAt).toLocaleString()}</p><h3 className="mt-2 font-display text-2xl text-emerald">{message.subject}</h3><p className="mt-1 text-sm text-charcoal/65">{message.fullName} · <a className="text-maroon underline" href={`mailto:${message.email}`}>{message.email}</a></p></div>{!message.readAt && <button type="button" onClick={() => void markRead(message.id)} className="w-fit text-sm font-semibold text-maroon underline">{tr('Mark as read')}</button>}</div><p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-charcoal/80">{message.message}</p>{message.emailStatus !== 'sent' && <p className="mt-3 text-xs text-maroon">{tr('Email notification:')} {tr(message.emailStatus)}{tr('. The message remains safely stored here.')}</p>}</article>)}</div>}</div>
       )}
     </PageShell>
+  );
+}
+
+const poemTones = [
+  { card: 'from-emerald via-[#1f4f45] to-[#0f2b25]', chip: 'bg-emerald' },
+  { card: 'from-maroon via-[#8a3a4d] to-[#4f1d2a]', chip: 'bg-maroon' },
+  { card: 'from-[#1e3a6e] via-[#27498a] to-[#132647]', chip: 'bg-[#1e3a6e]' },
+];
+
+function VerseDivider() {
+  return (
+    <div aria-hidden="true" className="my-1 flex items-center justify-center gap-3 text-gold/60">
+      <span className="h-px w-8 bg-current" />
+      <StarMark className="h-3 w-3" />
+      <span className="h-px w-8 bg-current" />
+    </div>
+  );
+}
+
+function PoemCard({ poem, index }: { poem: Poem; index: number }) {
+  const [copied, setCopied] = useState(false);
+  const tone = poemTones[index % poemTones.length];
+
+  async function share() {
+    const text = `${poem.poet}\n\n${poem.couplets.map((couplet) => couplet.join('\n')).join('\n\n')}`;
+    const url = `${window.location.origin}/poetry#${poem.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: poem.poet, text, url });
+        return;
+      }
+      await navigator.clipboard.writeText(`${text}\n\n${url}`);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2200);
+    } catch { /* sharing was dismissed */ }
+  }
+
+  return (
+    <article id={poem.id} className={`pattern-ajrak relative mb-6 scroll-mt-28 break-inside-avoid overflow-hidden rounded-[2rem] bg-gradient-to-br ${tone.card} text-ivory shadow-soft`}>
+      <StarMark className="absolute -end-10 -top-10 h-44 w-44 text-white/[0.06]" />
+      <span aria-hidden="true" className="verse absolute -top-4 start-5 text-[7rem] leading-none text-white/10">”</span>
+
+      <header dir="rtl" lang="skr" className="relative flex items-start justify-between gap-4 px-6 pt-7 sm:px-8">
+        <div>
+          <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs text-gold ring-1 ring-white/15">
+            <span className="font-display">{String(index + 1).padStart(2, '0')}</span>
+            <span aria-hidden="true">·</span>
+            <span className="verse-label">{poem.form}</span>
+          </p>
+          <h2 className="verse mt-3 text-[1.7rem] leading-[2.1] text-ivory sm:text-3xl">{poem.poet}</h2>
+          <p dir="ltr" className="mt-1.5 text-end text-[11px] uppercase tracking-[0.18em] text-ivory/55">{poem.poetLatin}</p>
+          {poem.note && <p className="verse-label mt-2 text-xs text-gold/90">{poem.note}</p>}
+        </div>
+      </header>
+
+      <div dir="rtl" lang="skr" className="relative px-5 pb-3 pt-4 sm:px-8">
+        {poem.couplets.map((couplet, coupletIndex) => {
+          const closing = coupletIndex === poem.couplets.length - 1;
+          return (
+            <div key={couplet[0]}>
+              {coupletIndex > 0 && <VerseDivider />}
+              <p className={`verse py-1 text-center text-[1.22rem] leading-[2.5] sm:text-[1.4rem] ${closing ? 'rounded-2xl bg-black/20 px-3 text-gold ring-1 ring-gold/25' : 'text-ivory/95'}`}>
+                <span className="block">{couplet[0]}</span>
+                <span className="block">{couplet[1]}</span>
+              </p>
+            </div>
+          );
+        })}
+      </div>
+
+      <footer className="relative flex items-center justify-between gap-3 border-t border-white/10 px-6 py-4 sm:px-8">
+        <span className="text-[11px] uppercase tracking-[0.18em] text-ivory/50">{tr('Saraiki poetry')}</span>
+        <button type="button" onClick={share} className="inline-flex min-h-[2.75rem] items-center gap-2 rounded-full bg-white/10 px-4 text-sm font-semibold text-ivory ring-1 ring-white/15 transition hover:bg-gold hover:text-[#0f2b25] active:scale-95">
+          <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M10 12.5V3M6.5 6 10 2.5 13.5 6M4 10v6.5h12V10" /></svg>
+          {copied ? tr('Copied') : tr('Share')}
+        </button>
+      </footer>
+    </article>
+  );
+}
+
+function PoetryPage() {
+  return (
+    <PageShell title={tr('Poetry')}>
+      <div className="mb-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+        <div>
+          <p className="eyebrow text-xs font-semibold uppercase tracking-[0.24em] text-gold">{tr('Voices of the Wasaib')}</p>
+          <h2 className="mt-3 font-display text-3xl leading-tight text-emerald sm:text-[2.6rem]">{tr('Verses in our mother tongue.')}</h2>
+          <p className="mt-3 max-w-2xl leading-7 text-charcoal/70">{tr('Ghazals in Saraiki from poets of many faiths and walks of life, gathered by the council. Each closing couplet carries the poet’s pen name.')}</p>
+        </div>
+        <p className="text-sm text-charcoal/55 lg:text-end">{tr('{count} poems', { count: poems.length })}</p>
+      </div>
+
+      <nav aria-label={tr('Poets')} dir="rtl" className="no-scrollbar -mx-4 mb-8 flex snap-x gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+        {poems.map((poem, index) => (
+          <a key={poem.id} href={`#${poem.id}`} lang="skr" className={`verse-label shrink-0 snap-start rounded-full px-4 py-2 text-sm text-ivory transition hover:-translate-y-0.5 active:scale-95 ${poemTones[index % poemTones.length].chip}`}>{poem.poet}</a>
+        ))}
+      </nav>
+
+      <div className="lg:columns-2 lg:gap-6">
+        {poems.map((poem, index) => <PoemCard key={poem.id} poem={poem} index={index} />)}
+      </div>
+    </PageShell>
+  );
+}
+
+function PoetrySpotlight() {
+  // A different poem leads each day.
+  const poem = poems[Math.floor(Date.now() / 86_400_000) % poems.length];
+  return (
+    <Reveal>
+      <section className="pattern-ajrak relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-maroon via-[#8a3a4d] to-[#4f1d2a] px-5 py-9 text-ivory shadow-soft sm:px-10 sm:py-12">
+        <StarMark className="absolute -end-12 -top-12 h-56 w-56 text-white/[0.06]" />
+        <div className="relative grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+          <div>
+            <p className="eyebrow text-xs font-semibold uppercase tracking-[0.24em] text-gold">{tr('Poetry')}</p>
+            <h2 className="mt-3 font-display text-3xl leading-tight sm:text-[2.6rem]">{tr('Verses in our mother tongue.')}</h2>
+            <p className="mt-3 max-w-md leading-7 text-ivory/75">{tr('Ghazals in Saraiki from poets of many faiths and walks of life, gathered by the council. Each closing couplet carries the poet’s pen name.')}</p>
+            <Link to="/poetry" className="btn-shine link-arrow mt-6 inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-semibold text-[#0f2b25] transition hover:-translate-y-0.5">{tr('Read the poetry')}<ArrowIcon className="h-4 w-4" /></Link>
+          </div>
+          <Link to={`/poetry#${poem.id}`} dir="rtl" lang="skr" className="block rounded-3xl bg-black/20 px-4 py-6 text-center ring-1 ring-white/15 transition hover:bg-black/30 sm:px-8">
+            <p className="verse text-[1.3rem] leading-[2.5] text-ivory sm:text-[1.6rem]">
+              <span className="block">{poem.couplets[0][0]}</span>
+              <span className="block">{poem.couplets[0][1]}</span>
+            </p>
+            <VerseDivider />
+            <p className="verse mt-2 text-base leading-[2.2] text-gold">{poem.poet}</p>
+          </Link>
+        </div>
+      </section>
+    </Reveal>
   );
 }
 
@@ -2191,8 +2482,9 @@ export default function App() {
   }, [locale]);
 
   return (
-    <div dir={getDirection(locale)} className="min-h-screen bg-ivory text-charcoal">
+    <div dir={getDirection(locale)} className="app-root min-h-screen bg-ivory pb-[calc(4rem+env(safe-area-inset-bottom))] text-charcoal lg:pb-0">
       <ScrollChrome />
+      <LogoPreview />
       <Header locale={locale} onLocaleChange={setLocale} />
       <Routes>
         <Route path="/" element={<HomePage locale={locale} />} />
@@ -2205,6 +2497,7 @@ export default function App() {
         <Route path="/council/content" element={<ContentManagementPage />} />
         <Route path="/council/volunteers" element={<VolunteerManagementPage />} />
         <Route path="/council/inbox" element={<ContactInboxPage />} />
+        <Route path="/poetry" element={<PoetryPage />} />
         <Route path="/culture" element={<CulturePage locale={locale} />} />
         <Route path="/culture/:slug" element={<ArticleDetailPage />} />
         <Route path="/announcements" element={<AnnouncementsPage locale={locale} />} />
