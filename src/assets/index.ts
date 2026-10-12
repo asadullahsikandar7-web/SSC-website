@@ -2,6 +2,7 @@ import heroVisual from './hero-visual.svg';
 import heritageScene from './heritage-scene.jpg';
 import eventSurface from './event-surface.svg';
 import councilPortrait from './heritage-scene.jpg';
+import memoryWall from './poetry and memory circle.jpg';
 
 import amjadPortrait from './Amjad.jpeg';
 import malikPortrait from './malik.jpeg';
@@ -18,6 +19,7 @@ export const assets = {
   heritageScene,
   eventSurface,
   councilPortrait,
+  memoryWall,
   amjad: amjadPortrait,
   malik: malikPortrait,
   sohail: sohailPortrait,

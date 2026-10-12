@@ -9,13 +9,14 @@ export default {
         gold: '#C5A45D',
         maroon: '#762F40',
         charcoal: '#26332F',
+        ajrak: '#1E3A6E',
       },
       boxShadow: {
         soft: '0 18px 45px rgba(23, 61, 53, 0.12)',
       },
       fontFamily: {
-        display: ['Georgia', 'serif'],
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Fraunces', 'Noto Naskh Arabic', 'Georgia', 'serif'],
+        sans: ['Inter', 'Noto Naskh Arabic', 'system-ui', 'sans-serif'],
       },
     },
   },

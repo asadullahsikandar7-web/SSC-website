@@ -10,6 +10,7 @@ describe('App shell', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    window.localStorage?.clear();
   });
 
   it('renders the homepage hero content', () => {
