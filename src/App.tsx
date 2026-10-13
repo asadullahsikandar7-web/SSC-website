@@ -241,7 +241,7 @@ function LogoPreview() {
         <img src={assets.logoLarge} alt={tr('Saraiki Student Council emblem')} className="max-h-[70vh] w-auto max-w-full object-contain drop-shadow-[0_24px_48px_rgba(0,0,0,0.55)]" />
         <figcaption className="mt-6 text-center text-ivory">
           <p className="font-display text-2xl sm:text-3xl">{tr('Saraiki Student Council')}</p>
-          <p className="mt-1.5 text-[11px] uppercase tracking-[0.24em] text-gold">{tr('Leads University · Lahore')}</p>
+          <p className="mt-1.5 text-[11px] uppercase tracking-[0.24em] text-gold">{tr('Lahore Leads University')}</p>
         </figcaption>
       </figure>
       <button type="button" autoFocus onClick={() => setOpen(false)} aria-label={tr('Close preview')} className="absolute end-4 top-4 grid h-12 w-12 place-items-center rounded-full bg-white/10 text-ivory ring-1 ring-white/20 transition hover:bg-gold hover:text-[#0f2b25] active:scale-95 sm:end-6 sm:top-6">
@@ -326,7 +326,7 @@ function ContactChannels() {
     { icon: 'email', label: 'Email', value: councilContacts.email, href: `mailto:${councilContacts.email}` },
     { icon: 'facebook', label: 'Facebook', value: 'Saraiki Student Council', href: councilContacts.facebook, external: true },
     { icon: 'tiktok', label: 'TikTok', value: councilContacts.tiktokHandle, href: councilContacts.tiktok, external: true },
-    { icon: 'location', label: 'Location', value: 'Leads University, Lahore' },
+    { icon: 'location', label: 'Location', value: 'Lahore Leads University' },
   ];
 
   return (
@@ -603,7 +603,7 @@ function Footer() {
               <h2 className="font-display text-2xl">{tr('Saraiki Student Council')}</h2>
             </div>
             <p className="mt-4 max-w-sm text-sm leading-6 text-ivory/70">{tr('A heritage-minded student leadership platform for campus life and community voice.')}</p>
-            <p className="mt-5 text-xs uppercase tracking-[0.22em] text-gold">{tr('Leads University · Lahore')}</p>
+            <p className="mt-5 text-xs uppercase tracking-[0.22em] text-gold">{tr('Lahore Leads University')}</p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <a href={councilContacts.facebook} target="_blank" rel="noopener noreferrer" aria-label={tr('Council on Facebook')} className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-ivory ring-1 ring-white/15 transition hover:-translate-y-0.5 hover:bg-gold hover:text-[#0f2b25]"><ContactIcon name="facebook" /></a>
               <a href={councilContacts.tiktok} target="_blank" rel="noopener noreferrer" aria-label={tr('Council on TikTok')} className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-ivory ring-1 ring-white/15 transition hover:-translate-y-0.5 hover:bg-gold hover:text-[#0f2b25]"><ContactIcon name="tiktok" /></a>
@@ -643,7 +643,7 @@ function Footer() {
           </div>
         </div>
         <div className="flex flex-col gap-2 border-t border-ivory/10 py-6 text-xs text-ivory/55 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} {tr('Saraiki Student Council, Leads University, Lahore.')}</p>
+          <p>© {new Date().getFullYear()} {tr('Saraiki Student Council, Lahore Leads University.')}</p>
           <p className="font-display text-sm italic text-gold/80">{tr('A living heritage. A shared future.')}</p>
         </div>
       </div>
@@ -731,7 +731,7 @@ function HomePage({ locale }: { locale: Locale }) {
             <div className="hero-enter order-2 lg:order-1">
               <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-gold ring-1 ring-white/15">
                 <StarMark className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{t.home} <span className="text-ivory/40">/</span></span> {tr('Leads University, Lahore')}
+                <span className="hidden sm:inline">{t.home} <span className="text-ivory/40">/</span></span> {tr('Lahore Leads University')}
               </p>
               <h1 className="mt-5 font-display text-[2.35rem] leading-[1.06] text-ivory sm:mt-6 sm:text-6xl xl:text-[4.25rem]">
                 {t.heroTitle}

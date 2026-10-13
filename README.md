@@ -1,6 +1,6 @@
 # Saraiki Student Council
 
-A production-minded multilingual website and member platform for the Saraiki Student Council at Leads University, Lahore.
+A production-minded multilingual website and member platform for the Saraiki Student Council at Lahore Leads University.
 
 ## Stack
 

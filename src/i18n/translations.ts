@@ -11,7 +11,7 @@ export const localeLabels: Record<Locale, string> = {
 export const translations: Record<Locale, Record<string, string>> = {
   en: {
     siteName: 'Saraiki Student Council',
-    subtitle: 'Leads University, Lahore',
+    subtitle: 'Lahore Leads University',
     home: 'Home',
     about: 'About Us',
     leadership: 'Leadership',
