@@ -1,0 +1,31 @@
+
+import 'dotenv/config';
+import { verifySmtpConnection } from '../lib/membershipEmail.js';
+
+verifySmtpConnection()
+  .then(() => {
+    console.log('SMTP verified successfully.');
+  })
+  .catch((error: unknown) => {
+    if (error instanceof Error) {
+      const e = error as Error & {
+        code?: string;
+        responseCode?: number;
+        response?: string;
+        command?: string;
+      };
+
+      console.error('SMTP diagnostic:', {
+        code: e.code,
+        responseCode: e.responseCode,
+        response: e.response,
+        command: e.command,
+        message: e.message,
+      });
+    } else {
+      console.error('Unknown SMTP error.');
+    }
+
+    process.exitCode = 1;
+  });
+   

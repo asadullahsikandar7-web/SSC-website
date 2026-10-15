@@ -635,6 +635,7 @@ function Footer() {
             <h3 className="text-xs font-semibold uppercase tracking-[0.22em] text-gold">{tr('Council staff')}</h3>
             <ul className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2.5 text-sm lg:block lg:space-y-2.5">
               <li><NavLink className={linkClass} to="/council/review">{tr('Council staff portal')}</NavLink></li>
+              <li><NavLink className={linkClass} to="/council/members">{tr('Council members')}</NavLink></li>
               <li><NavLink className={linkClass} to="/council/events">{tr('Event manager')}</NavLink></li>
               <li><NavLink className={linkClass} to="/council/content">{tr('Content desk')}</NavLink></li>
               <li><NavLink className={linkClass} to="/council/volunteers">{tr('Volunteer desk')}</NavLink></li>
@@ -1607,6 +1608,213 @@ function VolunteerManagementPage() {
   );
 }
 
+type MemberRecord = {
+  id: string;
+  memberNumber?: string;
+  fullName: string;
+  studentId: string;
+  department: string;
+  semester: string;
+  preferredLanguage: Locale;
+  isActive: boolean;
+  email?: string;
+  phoneNumber?: string;
+  areasOfInterest: string[];
+  motivationStatement?: string;
+  accountSetupStatus?: string;
+  emailNotificationStatus?: string;
+  appliedAt?: string;
+  joinedAt: string;
+  eventRegistrations: number;
+  volunteerApplications: number;
+};
+
+function downloadMembersCsv(members: MemberRecord[]) {
+  const columns: Array<[string, (member: MemberRecord) => string | number | undefined]> = [
+    ['Member number', (member) => member.memberNumber],
+    ['Full name', (member) => member.fullName],
+    ['Student ID', (member) => member.studentId],
+    ['Department', (member) => member.department],
+    ['Semester', (member) => member.semester],
+    ['Email', (member) => member.email],
+    ['Phone', (member) => member.phoneNumber],
+    ['Areas of interest', (member) => member.areasOfInterest.join('; ')],
+    ['Preferred language', (member) => localeLabels[member.preferredLanguage]],
+    ['Account', (member) => member.accountSetupStatus === 'ready' ? 'Activated' : 'Awaiting activation'],
+    ['Joined', (member) => new Date(member.joinedAt).toISOString().slice(0, 10)],
+    ['Event registrations', (member) => member.eventRegistrations],
+    ['Volunteer applications', (member) => member.volunteerApplications],
+    ['Why they joined', (member) => member.motivationStatement],
+  ];
+  const cell = (value: string | number | undefined) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  const rows = [columns.map(([label]) => cell(label)).join(','), ...members.map((member) => columns.map(([, read]) => cell(read(member))).join(','))];
+  // The byte-order mark lets Excel read Urdu and Saraiki text correctly.
+  const blob = new Blob(['﻿' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `ssc-members-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function MembersDirectoryPage() {
+  const [staff, setStaff] = useState<StaffUser | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [members, setMembers] = useState<MemberRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
+  const [department, setDepartment] = useState('all');
+  const [openId, setOpenId] = useState<string | null>(null);
+  const allowed = staff && ['admin', 'editor'].includes(staff.role);
+
+  async function loadMembers() {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await apiRequest<{ members: MemberRecord[] }>('/api/v1/membership/members');
+      setMembers(result.members);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : tr('Members could not be loaded.'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    let active = true;
+    apiRequest<{ user: StaffUser }>('/api/v1/auth/me')
+      .then(async (result) => {
+        if (!active) return;
+        setStaff(result.user);
+        if (['admin', 'editor'].includes(result.user.role)) await loadMembers();
+      })
+      .catch(() => { if (active) setStaff(null); })
+      .finally(() => { if (active) setAuthChecked(true); });
+    return () => { active = false; };
+  }, []);
+
+  async function signIn(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+    try {
+      const result = await apiRequest<{ user: StaffUser }>('/api/v1/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+      setStaff(result.user);
+      setPassword('');
+      if (['admin', 'editor'].includes(result.user.role)) await loadMembers();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : tr('Sign-in failed.'));
+    }
+  }
+
+  async function signOut() {
+    try { await apiRequest('/api/v1/auth/logout', { method: 'POST' }); }
+    finally { setStaff(null); setMembers([]); }
+  }
+
+  const departments = useMemo(() => [...new Set(members.map((member) => member.department))].sort((a, b) => a.localeCompare(b)), [members]);
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return members.filter((member) => (department === 'all' || member.department === department)
+      && (!needle || [member.fullName, member.studentId, member.email, member.memberNumber, member.department, member.phoneNumber].some((value) => value?.toLowerCase().includes(needle))));
+  }, [members, query, department]);
+
+  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+  const stats = [
+    { label: tr('Members'), value: members.length },
+    { label: tr('Accounts activated'), value: members.filter((member) => member.accountSetupStatus === 'ready').length },
+    { label: tr('Awaiting activation'), value: members.filter((member) => member.accountSetupStatus !== 'ready').length },
+    { label: tr('Joined this month'), value: members.filter((member) => new Date(member.joinedAt).getTime() >= startOfMonth).length },
+  ];
+  const fieldClass = 'w-full rounded-xl border border-emerald/20 bg-white px-4 py-3 text-sm outline-none focus:border-gold';
+
+  return (
+    <PageShell title={tr('Council Members')}>
+      {!authChecked ? <p className="text-sm text-charcoal/60">{tr('Checking staff session…')}</p> : !staff ? (
+        <div className="mx-auto max-w-xl rounded-3xl border border-emerald/15 bg-white p-7 shadow-soft"><p className="text-xs uppercase tracking-[0.18em] text-gold">{tr('Staff access')}</p><h2 className="mt-3 font-display text-3xl text-emerald">{tr('Sign in to view council members')}</h2><form onSubmit={signIn} className="mt-6 space-y-4"><label className="block text-sm font-medium text-emerald">{tr('Email')}<input required type="email" autoComplete="username" className={`mt-2 ${fieldClass}`} value={email} onChange={(input) => setEmail(input.target.value)} /></label><label className="block text-sm font-medium text-emerald">{tr('Password')}<input required type="password" autoComplete="current-password" className={`mt-2 ${fieldClass}`} value={password} onChange={(input) => setPassword(input.target.value)} /></label>{error && <p role="alert" className="text-sm text-maroon">{error}</p>}<button className="w-full bg-emerald px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-ivory">{tr('Sign in')}</button></form></div>
+      ) : !allowed ? (
+        <div className="rounded-2xl border-s-2 border-maroon bg-white p-6"><h2 className="font-display text-2xl text-emerald">{tr('Member records are not available for this account.')}</h2><button type="button" onClick={() => void signOut()} className="mt-4 text-sm text-maroon underline">{tr('Sign out')}</button></div>
+      ) : (
+        <div>
+          <div className="flex flex-col gap-4 border-b border-emerald/15 pb-5 sm:flex-row sm:items-end sm:justify-between">
+            <div><p className="text-xs uppercase tracking-[0.16em] text-charcoal/55">{tr('Signed in ·')} {staff.email}</p><h2 className="mt-2 font-display text-3xl text-emerald">{tr('Member directory')}</h2></div>
+            <div className="flex flex-wrap gap-3">
+              <Link to="/council/review" className="rounded-full border border-emerald/20 bg-white px-4 py-2.5 text-sm font-semibold text-emerald">{tr('Review applications')}</Link>
+              <button type="button" disabled={!members.length} onClick={() => downloadMembersCsv(visible)} className="rounded-full bg-emerald px-4 py-2.5 text-sm font-semibold text-ivory disabled:opacity-40">{tr('Download spreadsheet')}</button>
+              <button type="button" onClick={() => void signOut()} className="px-2 text-sm font-semibold text-maroon underline">{tr('Sign out')}</button>
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {stats.map((stat) => (
+              <div key={stat.label} className="rounded-2xl border border-emerald/10 bg-white p-5 shadow-soft">
+                <p className="font-display text-4xl text-emerald">{stat.value}</p>
+                <p className="mt-1 text-xs uppercase tracking-[0.14em] text-charcoal/55">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_16rem]">
+            <label className="block"><span className="sr-only">{tr('Search members')}</span><input type="search" placeholder={tr('Search by name, student ID, email or member number')} className={fieldClass} value={query} onChange={(input) => setQuery(input.target.value)} /></label>
+            <label className="block"><span className="sr-only">{tr('Department')}</span><select className={fieldClass} value={department} onChange={(input) => setDepartment(input.target.value)}><option value="all">{tr('All departments')}</option>{departments.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+          </div>
+
+          {error && <p role="alert" className="mt-4 text-sm text-maroon">{error}</p>}
+          {loading ? <div className="mt-6 grid gap-3 sm:grid-cols-2" role="status"><span className="sr-only">{tr('Loading members…')}</span>{[0, 1, 2, 3].map((item) => <div key={item} className="skeleton h-36" />)}</div> : visible.length === 0 ? (
+            <p className="mt-6 rounded-2xl border border-dashed border-emerald/20 bg-white/60 px-6 py-12 text-center text-sm text-charcoal/60">{members.length ? tr('No members match this search.') : tr('No members yet. Approved applications appear here.')}</p>
+          ) : (
+            <>
+              <p className="mt-6 text-xs text-charcoal/55">{tr('Showing {shown} of {total} members', { shown: visible.length, total: members.length })}</p>
+              <div className="mt-3 grid gap-4 lg:grid-cols-2">
+                {visible.map((member) => {
+                  const open = openId === member.id;
+                  const activated = member.accountSetupStatus === 'ready';
+                  return (
+                    <article key={member.id} className="overflow-hidden rounded-3xl border border-emerald/10 bg-white shadow-soft">
+                      <button type="button" aria-expanded={open} onClick={() => setOpenId(open ? null : member.id)} className="flex w-full items-center gap-4 p-5 text-start">
+                        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-emerald font-display text-lg text-gold">{member.fullName.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-display text-xl text-emerald">{member.fullName}</span>
+                          <span className="mt-0.5 block truncate text-xs text-charcoal/60">{member.department} · {tr('Semester')} {member.semester}</span>
+                          <span className="mt-2 flex flex-wrap gap-1.5">
+                            {member.memberNumber && <span dir="ltr" className="rounded-full bg-gold/15 px-2.5 py-0.5 text-[11px] font-semibold text-[#7a5f22]">{member.memberNumber}</span>}
+                            <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${activated ? 'bg-emerald/10 text-emerald' : 'bg-maroon/10 text-maroon'}`}>{activated ? tr('Account active') : tr('Awaiting activation')}</span>
+                          </span>
+                        </span>
+                        <svg viewBox="0 0 20 20" className={`h-5 w-5 shrink-0 text-emerald/50 transition ${open ? 'rotate-180' : ''}`} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 7.5l5 5 5-5" /></svg>
+                      </button>
+                      {open && (
+                        <dl className="grid grid-cols-1 gap-x-6 gap-y-4 border-t border-emerald/10 bg-ivory/50 p-5 text-sm sm:grid-cols-2">
+                          {[
+                            [tr('Student ID'), member.studentId],
+                            [tr('Email'), member.email ? <a className="text-maroon underline [overflow-wrap:anywhere]" href={`mailto:${member.email}`}>{member.email}</a> : '—'],
+                            [tr('Phone number'), member.phoneNumber ? <a dir="ltr" className="text-maroon underline" href={`tel:${member.phoneNumber}`}>{member.phoneNumber}</a> : '—'],
+                            [tr('Language'), localeLabels[member.preferredLanguage]],
+                            [tr('Applied'), member.appliedAt ? new Date(member.appliedAt).toLocaleDateString(dateLocale(), { dateStyle: 'medium' }) : '—'],
+                            [tr('Joined'), new Date(member.joinedAt).toLocaleDateString(dateLocale(), { dateStyle: 'medium' })],
+                            [tr('Event registrations'), member.eventRegistrations],
+                            [tr('Volunteer applications'), member.volunteerApplications],
+                          ].map(([label, value]) => (
+                            <div key={String(label)} className="min-w-0"><dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gold">{label}</dt><dd className="mt-1 text-charcoal/85">{value}</dd></div>
+                          ))}
+                          <div className="sm:col-span-2"><dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gold">{tr('Interests')}</dt><dd className="mt-1.5 flex flex-wrap gap-1.5">{member.areasOfInterest.length ? member.areasOfInterest.map((area) => <span key={area} className="rounded-full bg-emerald/[0.07] px-2.5 py-1 text-xs text-emerald">{tr(area)}</span>) : <span className="text-charcoal/60">{tr('Not specified')}</span>}</dd></div>
+                          {member.motivationStatement && <div className="sm:col-span-2"><dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gold">{tr('Why they joined')}</dt><dd className="mt-1 whitespace-pre-wrap leading-6 text-charcoal/80">{member.motivationStatement}</dd></div>}
+                        </dl>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </PageShell>
+  );
+}
+
 function ContactInboxPage() {
   const [staff, setStaff] = useState<StaffUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -1766,6 +1974,17 @@ function PoetryPage() {
         <p className="text-sm text-charcoal/55 lg:text-end">{tr('{count} poems', { count: poems.length })}</p>
       </div>
 
+      <section className="pattern-ajrak relative mb-10 overflow-hidden rounded-[2rem] bg-gradient-to-br from-emerald via-[#1f4f45] to-[#0f2b25] px-5 py-9 text-ivory shadow-soft sm:px-10">
+        <div className="grid items-center gap-9 md:grid-cols-[1fr_auto] md:gap-12">
+          <div>
+            <p className="eyebrow text-xs font-semibold uppercase tracking-[0.24em] text-gold">{tr('Recital')}</p>
+            <h2 className="mt-3 font-display text-3xl leading-tight sm:text-4xl">{tr('Hear it in the poet’s own voice.')}</h2>
+            <p className="mt-3 max-w-md leading-7 text-ivory/75">{tr('Saraiki verse is written to be spoken aloud. Play the recital and turn the sound on.')}</p>
+          </div>
+          <RecitalVideo className="md:w-[17rem]" />
+        </div>
+      </section>
+
       <nav aria-label={tr('Poets')} dir="rtl" className="no-scrollbar -mx-4 mb-8 flex snap-x gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
         {poems.map((poem, index) => (
           <a key={poem.id} href={`#${poem.id}`} lang="skr" className={`verse-label shrink-0 snap-start rounded-full px-4 py-2 text-sm text-ivory transition hover:-translate-y-0.5 active:scale-95 ${poemTones[index % poemTones.length].chip}`}>{poem.poet}</a>
@@ -1779,6 +1998,108 @@ function PoetryPage() {
   );
 }
 
+function RecitalVideo({ className = '' }: { className?: string }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(true);
+  const [progress, setProgress] = useState(0);
+  // Once the visitor pauses it themselves, scrolling no longer restarts it.
+  const pausedByVisitor = useRef(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || typeof IntersectionObserver === 'undefined') return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !pausedByVisitor.current) void video.play().catch(() => undefined);
+        else if (!entry.isIntersecting) video.pause();
+      },
+      { threshold: 0.55 },
+    );
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, []);
+
+  function togglePlay() {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      pausedByVisitor.current = false;
+      void video.play().catch(() => undefined);
+    } else {
+      pausedByVisitor.current = true;
+      video.pause();
+    }
+  }
+
+  function toggleSound() {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !video.muted;
+    setMuted(video.muted);
+    if (!video.muted && video.paused) {
+      pausedByVisitor.current = false;
+      void video.play().catch(() => undefined);
+    }
+  }
+
+  return (
+    <figure className={`relative mx-auto w-full max-w-[17rem] ${className}`}>
+      <div aria-hidden="true" className="absolute -inset-2.5 rounded-[2.4rem] border border-gold/45" />
+      <div className="relative overflow-hidden rounded-[2rem] bg-black shadow-2xl shadow-black/50 ring-1 ring-gold/40">
+        <video
+          ref={videoRef}
+          src={assets.recitalVideo}
+          poster={assets.recitalPoster}
+          muted
+          loop
+          playsInline
+          preload="none"
+          aria-label={tr('Saraiki poetry recital')}
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
+          onTimeUpdate={(event) => { const video = event.currentTarget; setProgress(video.duration ? video.currentTime / video.duration : 0); }}
+          onClick={togglePlay}
+          className="aspect-[9/16] w-full cursor-pointer object-cover"
+        />
+
+        {!playing && (
+          <button type="button" onClick={togglePlay} aria-label={tr('Play video')} className="absolute inset-0 grid place-items-center bg-black/25">
+            <span className="grid h-16 w-16 place-items-center rounded-full bg-gold text-[#0f2b25] shadow-xl ring-4 ring-white/25 transition active:scale-95">
+              <svg viewBox="0 0 24 24" className="ms-1 h-7 w-7" aria-hidden="true" fill="currentColor"><path d="M7 4.5v15l13-7.5z" /></svg>
+            </span>
+          </button>
+        )}
+
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-3 pb-3 pt-12">
+          <div className="pointer-events-auto flex items-center justify-between gap-2" dir="ltr">
+            <button type="button" onClick={togglePlay} aria-label={playing ? tr('Pause video') : tr('Play video')} className="grid h-10 w-10 place-items-center rounded-full bg-white/15 text-ivory ring-1 ring-white/25 backdrop-blur transition active:scale-95">
+              {playing
+                ? <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true" fill="currentColor"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" /></svg>
+                : <svg viewBox="0 0 24 24" className="ms-0.5 h-4 w-4" aria-hidden="true" fill="currentColor"><path d="M7 4.5v15l13-7.5z" /></svg>}
+            </button>
+            <button type="button" onClick={toggleSound} aria-pressed={!muted} className={`inline-flex h-10 items-center gap-2 rounded-full px-3.5 text-xs font-semibold ring-1 backdrop-blur transition active:scale-95 ${muted ? 'bg-gold text-[#0f2b25] ring-gold' : 'bg-white/15 text-ivory ring-white/25'}`}>
+              <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor" stroke="none" />
+                {muted ? <path d="M16 9.5l5 5M21 9.5l-5 5" /> : <path d="M15.5 9c1 .8 1.5 1.8 1.5 3s-.5 2.2-1.5 3M18 6.5c1.7 1.4 2.5 3.2 2.5 5.5s-.8 4.1-2.5 5.5" />}
+              </svg>
+              <span>{muted ? tr('Tap for sound') : tr('Sound on')}</span>
+            </button>
+          </div>
+          <div className="mt-2.5 h-[3px] overflow-hidden rounded-full bg-white/20" dir="ltr">
+            <div className="h-full origin-left bg-gold transition-transform duration-200" style={{ transform: `scaleX(${progress})` }} />
+          </div>
+        </div>
+      </div>
+      <figcaption dir="rtl" lang="skr" className="mt-5 text-center">
+        <span className="verse-label block text-[11px] text-gold">{tr('Recital')}</span>
+        <span className="verse mt-1 block text-lg leading-[2] text-current">ظہیر مہاروی</span>
+      </figcaption>
+    </figure>
+  );
+}
+
 function PoetrySpotlight() {
   // A different poem leads each day.
   const poem = poems[Math.floor(Date.now() / 86_400_000) % poems.length];
@@ -1786,13 +2107,14 @@ function PoetrySpotlight() {
     <Reveal>
       <section className="pattern-ajrak relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-maroon via-[#8a3a4d] to-[#4f1d2a] px-5 py-9 text-ivory shadow-soft sm:px-10 sm:py-12">
         <StarMark className="absolute -end-12 -top-12 h-56 w-56 text-white/[0.06]" />
-        <div className="relative grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+        <div className="relative grid gap-10 lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:gap-12">
           <div>
             <p className="eyebrow text-xs font-semibold uppercase tracking-[0.24em] text-gold">{tr('Poetry')}</p>
             <h2 className="mt-3 font-display text-3xl leading-tight sm:text-[2.6rem]">{tr('Verses in our mother tongue.')}</h2>
             <p className="mt-3 max-w-md leading-7 text-ivory/75">{tr('Ghazals in Saraiki from poets of many faiths and walks of life, gathered by the council. Each closing couplet carries the poet’s pen name.')}</p>
             <Link to="/poetry" className="btn-shine link-arrow mt-6 inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-semibold text-[#0f2b25] transition hover:-translate-y-0.5">{tr('Read the poetry')}<ArrowIcon className="h-4 w-4" /></Link>
           </div>
+          <RecitalVideo className="lg:w-[17rem]" />
           <Link to={`/poetry#${poem.id}`} dir="rtl" lang="skr" className="block rounded-3xl bg-black/20 px-4 py-6 text-center ring-1 ring-white/15 transition hover:bg-black/30 sm:px-8">
             <p className="verse text-[1.3rem] leading-[2.5] text-ivory sm:text-[1.6rem]">
               <span className="block">{poem.couplets[0][0]}</span>
@@ -2504,6 +2826,7 @@ export default function App() {
         <Route path="/announcements/:slug" element={<AnnouncementDetailPage />} />
         <Route path="/join" element={<JoinPage locale={locale} />} />
         <Route path="/council/review" element={<MembershipReviewPage />} />
+        <Route path="/council/members" element={<MembersDirectoryPage />} />
         <Route path="/member/setup" element={<MemberSetupPage />} />
         <Route path="/member" element={<MemberPortalPage />} />
         <Route path="/contact" element={<ContactPage />} />

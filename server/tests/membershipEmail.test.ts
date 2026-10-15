@@ -47,6 +47,21 @@ describe('membership decision email templates', () => {
     expect(message.text).toContain('expires in 48 hours');
   });
 
+  it('shows the member number and the council emblem when they are known', () => {
+    const message = createMembershipDecisionEmail({
+      email: 'student@leads.edu.pk',
+      fullName: 'Ayesha Hussain',
+      decision: 'approved',
+      locale: 'en',
+      memberNumber: 'SSC-2026-ABC123',
+      appUrl: 'https://ssc.example/',
+    });
+
+    expect(message.html).toContain('SSC-2026-ABC123');
+    expect(message.html).toContain('https://ssc.example/email-logo.png');
+    expect(message.text).toContain('Your member number: SSC-2026-ABC123');
+  });
+
   it('skips delivery safely when no applicant email is available', async () => {
     await expect(sendMembershipDecisionEmail({
       email: '',

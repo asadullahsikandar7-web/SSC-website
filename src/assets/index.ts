@@ -1,4 +1,6 @@
 import logo from './logo.webp';
+import recitalVideo from './poetry video 1.mp4';
+import recitalPoster from './recital-poster.webp';
 import logoLarge from './logo-large.webp';
 import heroVisual from './hero-visual.svg';
 import heritageScene from './heritage-scene.jpg';
@@ -18,6 +20,8 @@ import asadullahPortrait from './Asadullah.jpeg';
 
 export const assets = {
   logo,
+  recitalVideo,
+  recitalPoster,
   logoLarge,
   heroVisual,
   heritageScene,

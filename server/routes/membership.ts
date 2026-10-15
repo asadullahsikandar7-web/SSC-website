@@ -9,7 +9,9 @@ import { requireAuth, requireRole, type AuthenticatedRequest } from '../middlewa
 import { Member } from '../models/Member.js';
 import { MemberInvite } from '../models/MemberInvite.js';
 import { MembershipApplication } from '../models/MembershipApplication.js';
+import { EventRegistration } from '../models/EventRegistration.js';
 import { User } from '../models/User.js';
+import { VolunteerSignup } from '../models/VolunteerSignup.js';
 
 const router = Router();
 
@@ -65,7 +67,7 @@ async function issueMemberActivation(application: InstanceType<typeof Membership
     });
   }
 
-  const existingMember = await Member.findOne({ $or: [{ userId: user._id }, { studentId: application.studentId }] });
+  let existingMember = await Member.findOne({ $or: [{ userId: user._id }, { studentId: application.studentId }] });
   if (existingMember && String(existingMember.userId) !== String(user._id)) {
     throw new Error('Student ID is already linked to a different member account.');
   }
@@ -74,7 +76,7 @@ async function issueMemberActivation(application: InstanceType<typeof Membership
   }
 
   if (!existingMember) {
-    await Member.create({
+    existingMember = await Member.create({
       userId: user._id,
       applicationId: application._id,
       memberNumber: `SSC-${new Date().getFullYear()}-${randomBytes(3).toString('hex').toUpperCase()}`,
@@ -95,7 +97,11 @@ async function issueMemberActivation(application: InstanceType<typeof Membership
     tokenHash: createHash('sha256').update(token).digest('hex'),
     expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
   });
-  return { status: 'pending' as const, setupUrl: `${applicationUrl(requestOrigin)}/member/setup?token=${encodeURIComponent(token)}` };
+  return {
+    status: 'pending' as const,
+    setupUrl: `${applicationUrl(requestOrigin)}/member/setup?token=${encodeURIComponent(token)}`,
+    memberNumber: existingMember.memberNumber as string | undefined,
+  };
 }
 
 router.post('/applications', asyncHandler(async (req, res) => {
@@ -204,6 +210,64 @@ router.get(
   }),
 );
 
+router.get(
+  '/members',
+  requireAuth,
+  requireRole(['admin', 'editor']),
+  asyncHandler(async (_req, res) => {
+    const members = await Member.find().sort({ createdAt: -1 }).lean();
+    const userIds = members.map((member) => member.userId);
+    const applicationIds = members.map((member) => member.applicationId).filter(Boolean);
+    const [users, applications, volunteerCounts] = await Promise.all([
+      User.find({ _id: { $in: userIds } }, 'email isActive').lean(),
+      MembershipApplication.find({ _id: { $in: applicationIds } }).lean(),
+      VolunteerSignup.aggregate<{ _id: mongoose.Types.ObjectId; count: number }>([
+        { $match: { memberId: { $in: members.map((member) => member._id) }, status: { $ne: 'withdrawn' } } },
+        { $group: { _id: '$memberId', count: { $sum: 1 } } },
+      ]),
+    ]);
+    const userById = new Map(users.map((user) => [String(user._id), user]));
+    const applicationById = new Map(applications.map((application) => [String(application._id), application]));
+    const emails = users.map((user) => user.email);
+    const registrationCounts = await EventRegistration.aggregate<{ _id: string; count: number }>([
+      { $match: { email: { $in: emails }, status: 'confirmed' } },
+      { $group: { _id: '$email', count: { $sum: 1 } } },
+    ]);
+    const registrationsByEmail = new Map(registrationCounts.map((entry) => [entry._id, entry.count]));
+    const volunteersByMember = new Map(volunteerCounts.map((entry) => [String(entry._id), entry.count]));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        members: members.map((member) => {
+          const user = userById.get(String(member.userId));
+          const application = member.applicationId ? applicationById.get(String(member.applicationId)) : undefined;
+          return {
+            id: String(member._id),
+            memberNumber: member.memberNumber,
+            fullName: member.fullName,
+            studentId: member.studentId,
+            department: member.department,
+            semester: member.semester,
+            preferredLanguage: member.preferredLanguage,
+            isActive: member.isActive && (user?.isActive ?? false),
+            email: user?.email ?? application?.universityEmail,
+            phoneNumber: application?.phoneNumber,
+            areasOfInterest: application?.areasOfInterest ?? [],
+            motivationStatement: application?.motivationStatement,
+            accountSetupStatus: application?.accountSetupStatus,
+            emailNotificationStatus: application?.emailNotificationStatus,
+            appliedAt: application?.createdAt,
+            joinedAt: member.createdAt,
+            eventRegistrations: user ? registrationsByEmail.get(user.email) ?? 0 : 0,
+            volunteerApplications: volunteersByMember.get(String(member._id)) ?? 0,
+          };
+        }),
+      },
+    });
+  }),
+);
+
 router.patch(
   '/applications/:id/review',
   requireAuth,
@@ -240,11 +304,13 @@ router.patch(
     }
 
     let setupUrl: string | undefined;
+    let memberNumber: string | undefined;
     if (parsed.data.decision === 'approved') {
       try {
         const activation = await issueMemberActivation(application, req.get('origin'));
         application.accountSetupStatus = activation.status;
         setupUrl = activation.status === 'pending' ? activation.setupUrl : undefined;
+        memberNumber = activation.status === 'pending' ? activation.memberNumber : undefined;
       } catch (error) {
         application.accountSetupStatus = 'failed';
         console.error('Member account provisioning failed for application.', String(application._id), error instanceof Error ? error.message : 'Unknown error');
@@ -260,6 +326,8 @@ router.patch(
       reason: application.rejectionReason,
       locale: application.preferredLanguage,
       setupUrl,
+      memberNumber,
+      appUrl: applicationUrl(req.get('origin')),
     });
     application.emailNotificationStatus = emailNotificationStatus;
     application.emailNotificationSentAt = emailNotificationStatus === 'sent' ? new Date() : undefined;
@@ -300,11 +368,13 @@ router.post(
     }
 
     let setupUrl: string | undefined;
+    let memberNumber: string | undefined;
     if (application.status === 'approved' && application.accountSetupStatus !== 'ready') {
       try {
         const activation = await issueMemberActivation(application, req.get('origin'));
         application.accountSetupStatus = activation.status;
         setupUrl = activation.status === 'pending' ? activation.setupUrl : undefined;
+        memberNumber = activation.status === 'pending' ? activation.memberNumber : undefined;
       } catch {
         application.accountSetupStatus = 'failed';
       }
@@ -317,6 +387,8 @@ router.post(
       reason: application.rejectionReason,
       locale: application.preferredLanguage,
       setupUrl,
+      memberNumber,
+      appUrl: applicationUrl(req.get('origin')),
     });
     application.emailNotificationStatus = emailNotificationStatus;
     application.emailNotificationSentAt = emailNotificationStatus === 'sent' ? new Date() : undefined;

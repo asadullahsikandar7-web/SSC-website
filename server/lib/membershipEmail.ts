@@ -9,6 +9,15 @@ type DecisionEmailInput = {
   reason?: string;
   locale: Locale;
   setupUrl?: string;
+  memberNumber?: string;
+  // Public address of the website, used for the emblem image in the email header.
+  appUrl?: string;
+};
+
+const memberNumberLabel: Record<Locale, string> = {
+  en: 'Your member number',
+  ur: 'آپ کا ممبر نمبر',
+  skr: 'تہاݙا ممبر نمبر',
 };
 
 type EmailTemplate = {
@@ -110,8 +119,14 @@ export function createMembershipDecisionEmail(input: DecisionEmailInput) {
   const safeReason = input.reason ? escapeHtml(input.reason) : '';
   const paragraphsHtml = template.paragraphs.map((paragraph) => `<p style="margin:0 0 14px;color:#46534e;font-size:15px;line-height:1.8">${paragraph}</p>`).join('');
   const reasonHtml = safeReason
-    ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:26px 0;background:#f7f3e9;border-${direction === 'rtl' ? 'right' : 'left'}:3px solid #b99a59"><tr><td style="padding:18px 20px"><div style="margin-bottom:8px;color:#8d7440;font-size:11px;font-weight:bold;letter-spacing:1px;text-transform:uppercase">${template.reasonLabel}</div><div style="color:#273630;font-size:14px;line-height:1.8">${safeReason}</div></td></tr></table>`
+    ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:26px 0;background:#f7f3e9;border-${direction === 'rtl' ? 'right' : 'left'}:3px solid #b99a59"><tr><td style="padding:18px 20px"><div style="margin-bottom:8px;color:#8d7440;font-size:11px;font-weight:bold;letter-spacing:1px;text-transform:uppercase">${template.reasonLabel}</div><div dir="auto" style="color:#273630;font-size:14px;line-height:1.8">${safeReason}</div></td></tr></table>`
     : '';
+  const safeMemberNumber = input.decision === 'approved' && input.memberNumber ? escapeHtml(input.memberNumber) : '';
+  const memberNumberHtml = safeMemberNumber
+    ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:26px 0 6px"><tr><td align="center" style="padding:20px;background:#173d35;border-radius:10px"><div style="color:#d9c99e;font-size:11px;font-weight:bold;letter-spacing:1.5px;text-transform:uppercase">${memberNumberLabel[locale]}</div><div style="margin-top:8px;color:#ffffff;font-family:Georgia,serif;font-size:26px;letter-spacing:2px" dir="ltr">${safeMemberNumber}</div></td></tr></table>`
+    : '';
+  const logoUrl = input.appUrl ? `${input.appUrl.replace(/\/$/, '')}/email-logo.png` : '';
+  const logoHtml = logoUrl ? `<img src="${escapeHtml(logoUrl)}" width="72" height="72" alt="Saraiki Student Council" style="display:block;margin:0 0 14px;border:0;outline:none">` : '';
   const safeSetupUrl = input.setupUrl ? escapeHtml(input.setupUrl) : '';
   const actionHtml = safeSetupUrl
     ? `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:26px 0"><tr><td bgcolor="#173d35" style="background:#173d35"><a href="${safeSetupUrl}" style="display:inline-block;padding:14px 22px;color:#fff;font-size:13px;font-weight:bold;text-decoration:none">${template.actionLabel}</a></td></tr></table><p style="margin:0 0 18px;color:#68746f;font-size:12px;line-height:1.7">This secure link expires in 48 hours and can only be used once.</p>`
@@ -122,13 +137,14 @@ export function createMembershipDecisionEmail(input: DecisionEmailInput) {
     template.heading,
     `Dear ${input.fullName},`,
     ...template.paragraphs,
+    ...(safeMemberNumber ? [`${memberNumberLabel[locale]}: ${input.memberNumber}`] : []),
     ...(input.reason ? [`${template.reasonLabel}: ${input.reason}`] : []),
     ...(input.setupUrl ? [`${template.actionLabel}: ${input.setupUrl}`, 'This secure link expires in 48 hours and can only be used once.'] : []),
     template.signoff,
     'Saraiki Student Council · Lahore Leads University',
   ].join('\n\n');
 
-  const html = `<!doctype html><html lang="${locale}" dir="${direction}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"></head><body style="margin:0;padding:0;background:#f0eee8;font-family:Arial,Helvetica,sans-serif"><div style="display:none;max-height:0;overflow:hidden;opacity:0">${template.preheader}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0eee8"><tr><td align="center" style="padding:36px 14px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#fff"><tr><td style="height:7px;background:#173d35;font-size:0;line-height:0">&nbsp;</td></tr><tr><td style="padding:28px 34px 24px;border-bottom:1px solid #e7e5df"><div style="color:#173d35;font-family:Georgia,serif;font-size:20px;font-weight:bold">Saraiki Student Council</div><div style="margin-top:5px;color:#8d7440;font-size:10px;letter-spacing:2px;text-transform:uppercase">Lahore Leads University</div></td></tr><tr><td style="padding:34px"><div style="display:inline-block;padding:8px 11px;background:${input.decision === 'approved' ? '#eaf2ec' : '#f7eeee'};color:${input.decision === 'approved' ? '#24543c' : '#762f40'};font-size:10px;font-weight:bold;letter-spacing:1.3px;text-transform:uppercase">${template.label}</div><h1 style="margin:20px 0 22px;color:#173d35;font-family:Georgia,serif;font-size:30px;font-weight:normal;line-height:1.25">${template.heading}</h1><p style="margin:0 0 16px;color:#273630;font-size:15px;line-height:1.7">${locale === 'en' ? `Dear ${safeName},` : `${safeName} عزیز،`}</p>${paragraphsHtml}${reasonHtml}${actionHtml}<p style="margin:28px 0 0;color:#273630;font-size:14px;line-height:1.8">${template.signoff.replace('The Saraiki Student Council', '<strong>The Saraiki Student Council</strong>').replace('سرائیکی طلبہ کونسل', '<strong>سرائیکی طلبہ کونسل</strong>')}</p></td></tr><tr><td style="padding:20px 34px;background:#173d35;color:#fff"><div style="font-family:Georgia,serif;font-size:15px">A living heritage. A shared future.</div><div style="margin-top:7px;color:#d9c99e;font-size:11px;line-height:1.6">Saraiki Student Council · Lahore Leads University<br>This message concerns your council membership application.</div></td></tr></table></td></tr></table></body></html>`;
+  const html = `<!doctype html><html lang="${locale}" dir="${direction}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"></head><body style="margin:0;padding:0;background:#f0eee8;font-family:Arial,Helvetica,sans-serif"><div style="display:none;max-height:0;overflow:hidden;opacity:0">${template.preheader}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0eee8"><tr><td align="center" style="padding:36px 14px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#fff"><tr><td style="height:7px;background:#173d35;font-size:0;line-height:0">&nbsp;</td></tr><tr><td style="padding:28px 34px 24px;border-bottom:1px solid #e7e5df">${logoHtml}<div style="color:#173d35;font-family:Georgia,serif;font-size:20px;font-weight:bold">Saraiki Student Council</div><div style="margin-top:5px;color:#8d7440;font-size:10px;letter-spacing:2px;text-transform:uppercase">Lahore Leads University</div></td></tr><tr><td style="padding:34px"><div style="display:inline-block;padding:8px 11px;background:${input.decision === 'approved' ? '#eaf2ec' : '#f7eeee'};color:${input.decision === 'approved' ? '#24543c' : '#762f40'};font-size:10px;font-weight:bold;letter-spacing:1.3px;text-transform:uppercase">${template.label}</div><h1 style="margin:20px 0 22px;color:#173d35;font-family:Georgia,serif;font-size:30px;font-weight:normal;line-height:1.25">${template.heading}</h1><p style="margin:0 0 16px;color:#273630;font-size:15px;line-height:1.7">${locale === 'en' ? `Dear ${safeName},` : `${safeName} عزیز،`}</p>${paragraphsHtml}${memberNumberHtml}${reasonHtml}${actionHtml}<p style="margin:28px 0 0;color:#273630;font-size:14px;line-height:1.8">${template.signoff.replace('The Saraiki Student Council', '<strong>The Saraiki Student Council</strong>').replace('سرائیکی طلبہ کونسل', '<strong>سرائیکی طلبہ کونسل</strong>')}</p></td></tr><tr><td style="padding:20px 34px;background:#173d35;color:#fff;text-align:${direction === 'rtl' ? 'right' : 'left'}"><div dir="ltr" style="font-family:Georgia,serif;font-size:15px">A living heritage. A shared future.</div><div dir="ltr" style="margin-top:7px;color:#d9c99e;font-size:11px;line-height:1.6">Saraiki Student Council · Lahore Leads University<br>This message concerns your council membership application.</div></td></tr></table></td></tr></table></body></html>`;
 
   return { to: input.email, subject, text, html };
 }
@@ -140,7 +156,9 @@ function getTransport() {
   const host = process.env.SMTP_HOST ?? process.env.smtp_host;
   const port = Number(process.env.SMTP_PORT ?? process.env.smtp_port ?? 587);
   const user = process.env.SMTP_USER ?? process.env.smtp_user;
-  const pass = process.env.SMTP_PASS ?? process.env.smtp_pass;
+  const rawPass = process.env.SMTP_PASS ?? process.env.smtp_pass;
+  // Gmail shows app passwords in groups of four separated by spaces; the spaces are not part of it.
+  const pass = rawPass && host?.includes('gmail') ? rawPass.replace(/\s+/g, '') : rawPass;
   if (!host || !Number.isInteger(port) || port < 1 || port > 65535) return undefined;
 
   transport = nodemailer.createTransport({

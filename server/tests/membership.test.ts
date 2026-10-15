@@ -146,4 +146,32 @@ describe('membership applications', () => {
     expect(profile.body.data.member.memberNumber).toMatch(/^SSC-/);
     expect((await MembershipApplication.findById(applicationId))?.accountSetupStatus).toBe('ready');
   });
+
+  it('lists approved members with their application details for staff only', async () => {
+    const submission = await request(app).post('/api/v1/membership/applications').send(applicationPayload);
+    const applicationId = submission.body.data.application.id as string;
+    const password = 'StrongPassword123!';
+    await User.create({ email: 'admin@example.com', passwordHash: await hashPassword(password), role: 'admin' });
+    const staffCookie = (await request(app).post('/api/v1/auth/login').send({ email: 'admin@example.com', password })).headers['set-cookie'][0];
+
+    const anonymous = await request(app).get('/api/v1/membership/members');
+    const emptyDirectory = await request(app).get('/api/v1/membership/members').set('Cookie', staffCookie);
+    await request(app).patch(`/api/v1/membership/applications/${applicationId}/review`).set('Cookie', staffCookie).send({ decision: 'approved' });
+    const directory = await request(app).get('/api/v1/membership/members').set('Cookie', staffCookie);
+
+    expect(anonymous.status).toBe(401);
+    expect(emptyDirectory.body.data.members).toHaveLength(0);
+    expect(directory.status).toBe(200);
+    expect(directory.body.data.members).toHaveLength(1);
+    expect(directory.body.data.members[0]).toMatchObject({
+      fullName: applicationPayload.fullName,
+      studentId: applicationPayload.studentId,
+      email: applicationPayload.universityEmail,
+      phoneNumber: applicationPayload.phoneNumber,
+      areasOfInterest: applicationPayload.areasOfInterest,
+      accountSetupStatus: 'pending',
+      eventRegistrations: 0,
+    });
+    expect(directory.body.data.members[0].memberNumber).toMatch(/^SSC-/);
+  });
 });

@@ -8,6 +8,7 @@
     "dev:client": "vite",
     "dev:server": "tsx watch server/app.ts",
     "admin:create": "tsx server/scripts/createAdmin.ts",
+    "password:reset": "tsx server/scripts/resetPassword.ts",
     "seed": "tsx server/scripts/seed.ts",
     "email:verify": "tsx server/scripts/verifySmtp.ts",
     "logo": "python3 scripts/update-logo.py",

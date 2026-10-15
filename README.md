@@ -56,6 +56,7 @@ A production-minded multilingual website and member platform for the Saraiki Stu
 - npm run test:run
 - npm run test:api
 - npm run admin:create
+- npm run password:reset (sets a new password for any staff or member account and signs it out everywhere)
 - npm run seed (adds starter announcements, articles, cabinet profiles, events, and volunteer calls; only inserts what is missing)
 - npm run email:verify
 
