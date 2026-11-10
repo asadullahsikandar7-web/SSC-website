@@ -10,6 +10,8 @@ import {
 import { assets } from './assets';
 import { dateLocale, setActiveLocale, tr } from './i18n/tr';
 import { poems, type Poem } from './poetry';
+import LaunchPresentation from './LaunchPresentation';
+import { cabinetMembers, type CabinetMember } from './cabinet';
 
 type StaffUser = { id: string; email: string; role: string };
 type MemberProfile = { id: string; memberNumber?: string; fullName: string; studentId: string; department: string; semester: string; preferredLanguage: Locale };
@@ -19,14 +21,6 @@ type VolunteerSignupView = { id: string; status: 'applied' | 'accepted' | 'decli
 type ManagedVolunteerOpportunity = VolunteerOpportunityView & { signups: VolunteerSignupView[] };
 type ContactMessageView = { id: string; fullName: string; email: string; subject: string; message: string; emailStatus: 'sent' | 'failed' | 'skipped'; readAt?: string; createdAt: string };
 
-type CabinetMember = {
-  id: string;
-  name: string;
-  designation: string;
-  category: 'main' | 'executive';
-  image?: string;
-  notes?: string;
-};
 
 type CouncilEvent = {
   id: string;
@@ -121,21 +115,6 @@ function usePublicContent(contentType: CmsContent['contentType'], locale?: Local
   return { items, loading, error };
 }
 
-const cabinetMembers: CabinetMember[] = [
-  { id: 'amjad-amin', name: 'Amjad Amin', designation: 'Chairman', category: 'main', image: assets.amjad },
-  { id: 'malik-zahid', name: 'Malik Zahid', designation: 'Vice Chairman', category: 'main', image: assets.malik },
-  { id: 'sohail-majeed', name: 'Sohail Majeed', designation: 'President', category: 'main', image: assets.sohail },
-  { id: 'meer-asmat-baloch', name: 'Meer Asmat Baloch', designation: 'General Secretary', category: 'main', image: assets.meer },
-  { id: 'ramish-khan', name: 'Ramish Khan', designation: 'Advisor to Council', category: 'executive', notes: 'No matching local portrait file found for Ramish Khan (expected ramish.* in src/assets).' },
-  { id: 'muhammad-haris', name: 'Muhammad Haris', designation: 'Joint Secretary', category: 'executive', notes: 'No matching local portrait file found for Muhammad Haris (expected haris.* in src/assets).' },
-  { id: 'zeeshan-chandia', name: 'Zeeshan Chandia', designation: 'Cultural Secretary', category: 'executive', image: assets.zeeshan },
-  { id: 'adnan-zafar', name: 'Adnan Zafar', designation: 'Finance Secretary', category: 'executive', image: assets.adnan },
-  { id: 'muhammad-ahmad', name: 'Muhammad Ahmad', designation: 'Information Secretary', category: 'executive', image: assets.ahmed },
-  { id: 'asadullah', name: 'Asadullah', designation: 'Academic Secretary', category: 'executive', image: assets.asadullah },
-  { id: 'zulfiqar-ahamd', name: 'Zulfiqar Ahamd', designation: 'Action Committee Head', category: 'executive', notes: 'No matching local portrait file found for Zulfiqar Ahamd (expected zulfiqar.* in src/assets). Please confirm the correct image and spelling before publishing.' },
-  { id: 'malik-sheroz', name: 'Malik Sheroz', designation: 'Senior Event Organizer', category: 'executive', notes: 'No matching local portrait file found for Malik Sheroz (expected sheroz.* or malik-sheroz.* in src/assets).' },
-  { id: 'hasnain-shafi', name: 'Hasnain Shafi', designation: 'Sports Secretary', category: 'executive', notes: 'No matching local portrait file found for Hasnain Shafi (expected hasnain.* in src/assets).' },
-];
 
 const cabinetPortraits: Record<string, string | undefined> = Object.fromEntries(cabinetMembers.map((member) => [member.name, member.image]));
 
@@ -206,7 +185,7 @@ function Logo({ className = 'h-11 w-11', label }: { className?: string; label?: 
       onClick={(event) => { event.preventDefault(); event.stopPropagation(); window.dispatchEvent(new Event(LOGO_PREVIEW_EVENT)); }}
       className={`logo-button grid shrink-0 cursor-zoom-in place-items-center rounded-full transition duration-300 hover:scale-105 active:scale-95 ${className}`}
     >
-      <img src={assets.logo} alt="" className="h-full w-full object-contain drop-shadow-[0_3px_6px_rgba(9,31,27,0.28)]" />
+      <img src={assets.logo} alt="" className="h-full w-full rounded-full object-contain drop-shadow-[0_3px_6px_rgba(9,31,27,0.28)]" />
     </button>
   );
 }
@@ -2802,6 +2781,9 @@ export default function App() {
     document.title = translations[locale].siteName;
     try { window.localStorage.setItem('ssc-locale', locale); } catch { /* storage unavailable */ }
   }, [locale]);
+
+  const { pathname } = useLocation();
+  if (pathname === '/launch') return <LaunchPresentation />;
 
   return (
     <div dir={getDirection(locale)} className="app-root min-h-screen bg-ivory pb-[calc(4rem+env(safe-area-inset-bottom))] text-charcoal lg:pb-0">

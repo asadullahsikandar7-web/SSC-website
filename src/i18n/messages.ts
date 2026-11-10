@@ -155,7 +155,7 @@ const table: Array<[string, string, string]> = [
   ["Adnan Zafar", "عدنان ظفر", "عدنان ظفر"],
   ["Muhammad Ahmad", "محمد احمد", "محمد احمد"],
   ["Asadullah", "اسد اللہ", "اسد اللہ"],
-  ["Zulfiqar Ahamd", "ذوالفقار احمد", "ذوالفقار احمد"],
+  ["Zulfiqar Ahmad", "ذوالفقار احمد", "ذوالفقار احمد"],
   ["Malik Sheroz", "ملک شیروز", "ملک شیروز"],
   ["Hasnain Shafi", "حسنین شفیع", "حسنین شفیع"],
   ["Chairman of the Saraiki Student Council for the 2026–2027 session.", "سیشن 2026–2027 کے لیے سرائیکی طلبہ کونسل کے چیئرمین۔", "سیشن 2026–2027 کیتے سرائیکی طلبہ کونسل دے چیئرمین۔"],

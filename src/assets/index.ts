@@ -1,7 +1,6 @@
-import logo from './logo.webp';
+import updatedLogo from './updated-logo.jpeg';
 import recitalVideo from './poetry video 1.mp4';
 import recitalPoster from './recital-poster.webp';
-import logoLarge from './logo-large.webp';
 import heroVisual from './hero-visual.svg';
 import heritageScene from './heritage-scene.jpg';
 import eventSurface from './event-surface.svg';
@@ -17,12 +16,17 @@ import zeeshanPortrait from './zeeshan.jpeg';
 import ahmedPortrait from './Ahmed.jpeg';
 import ahmedPicturePortrait from './Ahmed picture.jpeg';
 import asadullahPortrait from './Asadullah.jpeg';
+import ramishPortrait from './ramish.jpeg';
+import husnainPortrait from './husnain.jpeg';
+import sherozPortrait from './sheroz.jpeg';
+import harisPortrait from './Haris.jpeg';
+import zulfiqarPortrait from './zulfiqar.jpeg';
 
 export const assets = {
-  logo,
+  logo: updatedLogo,
   recitalVideo,
   recitalPoster,
-  logoLarge,
+  logoLarge: updatedLogo,
   heroVisual,
   heritageScene,
   eventSurface,
@@ -37,4 +41,9 @@ export const assets = {
   ahmed: ahmedPortrait,
   ahmedPicture: ahmedPicturePortrait,
   asadullah: asadullahPortrait,
+  ramish: ramishPortrait,
+  husnain: husnainPortrait,
+  sheroz: sherozPortrait,
+  haris: harisPortrait,
+  zulfiqar: zulfiqarPortrait,
 };
